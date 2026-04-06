@@ -94,8 +94,8 @@ jobs:
       with:
         package-name: 'Optivem.Testing'
         version: ${{ steps.validate.outputs.release-version }}
-        max-retries: '30'
-        interval-seconds: '10'
+        max-retries: '60'
+        interval-seconds: '15'
 
     - name: Restore release smoke test dependencies (retry)
       uses: ./.github/actions/dotnet-restore-with-retry
