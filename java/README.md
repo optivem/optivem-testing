@@ -11,7 +11,7 @@ A testing library to support channel-based Acceptance Testing in Java.
 
 ```gradle
 dependencies {
-    implementation 'com.optivem:optivem-testing:1.1.0'
+    implementation 'com.optivem:optivem-testing:1.1.1'
 }
 ```
 
@@ -21,7 +21,7 @@ dependencies {
 <dependency>
     <groupId>com.optivem</groupId>
     <artifactId>optivem-testing</artifactId>
-    <version>1.1.0</version>
+    <version>1.1.1</version>
 </dependency>
 ```
 
