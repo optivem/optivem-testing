@@ -7,6 +7,22 @@ on:
         description: 'RC version to promote (e.g., 1.0.0-rc.47, or leave blank for latest RC)'
         required: false
         type: string
+  workflow_call:
+    inputs:
+      rc_version:
+        description: 'RC version to promote (e.g., 1.0.0-rc.47, or leave blank for latest RC)'
+        required: false
+        type: string
+    outputs:
+      release-version:
+        description: 'The release version that was published'
+        value: ${{ jobs.promote-rc-to-release.outputs.release-version }}
+      rc-version:
+        description: 'The RC version that was promoted'
+        value: ${{ jobs.promote-rc-to-release.outputs.rc-version }}
+    secrets:
+      NUGET_API_KEY:
+        required: true
 
 jobs:
   promote-rc-to-release:
@@ -15,45 +31,43 @@ jobs:
       run:
         working-directory: dotnet
     permissions:
-      contents: write
+      contents: read
       packages: read
-    
+    outputs:
+      release-version: ${{ steps.validate.outputs.release-version }}
+      rc-version: ${{ steps.find-rc.outputs.rc-version }}
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        fetch-depth: 0  # Fetch all history and tags for version checking
-    
+        fetch-depth: 0
+
     - name: Setup .NET
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
-    
+
     - name: Find latest RC version if not provided
       id: find-rc
       uses: ./.github/actions/find-latest-nuget-rc-version
       with:
-        rc-version: ${{ github.event.inputs.rc_version }}
+        rc-version: ${{ inputs.rc_version }}
         github-token: ${{ secrets.GITHUB_TOKEN }}
         package-name: 'Optivem.Testing'
-    
+
     - name: Extract release version from prerelease
       id: validate
       uses: optivem/extract-release-version-action@v1
       with:
         prerelease-version: ${{ steps.find-rc.outputs.rc-version }}
-    
+
     - name: Check if release version already exists on NuGet.org
       uses: ./.github/actions/check-nuget-package-exists
       with:
         release-version: ${{ steps.validate.outputs.release-version }}
         package-name: 'Optivem.Testing'
-    
-    - name: Check if Git tag already exists
-      uses: optivem/check-tag-exists-action@v1
-      with:
-        tag-name: v${{ steps.validate.outputs.release-version }}
-    
+
     - name: Download RC package from GitHub Packages
       uses: ./.github/actions/download-nuget-rc-artifacts
       with:
@@ -61,20 +75,20 @@ jobs:
         github-username: ${{ github.actor }}
         github-token: ${{ secrets.GITHUB_TOKEN }}
         package-name: 'Optivem.Testing'
-    
+
     - name: Repack with release version
       uses: ./.github/actions/prepare-nuget-release-artifacts
       with:
         rc-version: ${{ steps.find-rc.outputs.rc-version }}
         release-version: ${{ steps.validate.outputs.release-version }}
         package-name: 'Optivem.Testing'
-    
+
     - name: Publish to NuGet.org
       uses: ./.github/actions/publish-nuget
       with:
         package-path: './temp-release/Optivem.Testing.${{ steps.validate.outputs.release-version }}.nupkg'
         nuget-api-key: ${{ secrets.NUGET_API_KEY }}
-    
+
     - name: Wait for NuGet.org indexing
       uses: ./.github/actions/wait-for-nuget-indexing
       with:
@@ -90,69 +104,15 @@ jobs:
         version: ${{ steps.validate.outputs.release-version }}
         max-retries: '5'
         interval-seconds: '30'
-    
+
     - name: Run release smoke tests (NuGet.org)
       run: |
         echo "🧪 Running release smoke tests..."
         dotnet test SystemTest/Optivem.Testing.SystemTest.SmokeTestRelease/Optivem.Testing.SystemTest.SmokeTestRelease.csproj --no-restore -p:Version="${{ steps.validate.outputs.release-version }}"
-    
-    - name: Create Git tag
-      uses: optivem/create-tag-action@v1
-      with:
-        tag-name: v${{ steps.validate.outputs.release-version }}
-    
-    - name: Create GitHub Release
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: v${{ steps.validate.outputs.release-version }}
-        name: Release ${{ steps.validate.outputs.release-version }}
-        body: |
-          🎉 **Release ${{ steps.validate.outputs.release-version }}**
-          
-          This release was promoted from RC version `${{ steps.find-rc.outputs.rc-version }}` after passing all acceptance tests.
-          
-          **Promoted Artifacts:**
-          - Same exact package that passed testing
-          - No rebuild - identical artifacts guaranteed
-          - ✅ Passed release smoke tests on NuGet.org
-          - ✅ Automatically published to NuGet.org
-          
-          **Installation:**
-          ```bash
-          dotnet add package Optivem.Testing --version ${{ steps.validate.outputs.release-version }}
-          ```
-          
-          **NuGet Package:**
-          https://www.nuget.org/packages/Optivem.Testing/${{ steps.validate.outputs.release-version }}
-          
-          **Note:** NuGet.org synchronization may take a few minutes.
-        generate_release_notes: true
-        draft: false
-        prerelease: false
-    
-    - name: Display next steps
-      shell: pwsh
-      run: |
-        $releaseVersion = "${{ steps.validate.outputs.release-version }}"
-        Write-Host ""
-        Write-Host "🎉 Release promotion completed successfully!" -ForegroundColor Green
-        Write-Host ""
-        Write-Host "📋 What happened:" -ForegroundColor Cyan
-        Write-Host "1. ✅ Downloaded RC package from GitHub Packages" -ForegroundColor White
-        Write-Host "2. ✅ Repacked and published to NuGet.org (same artifacts, no rebuild)" -ForegroundColor White
-        Write-Host "3. ✅ Waited for NuGet.org indexing and ran smoke tests" -ForegroundColor White
-        Write-Host "4. ✅ Created Git tag v${releaseVersion}" -ForegroundColor White
-        Write-Host "5. ✅ Created GitHub Release" -ForegroundColor White
-        Write-Host ""
-        Write-Host "📋 Next Steps:" -ForegroundColor Cyan
-        Write-Host "1. ⏳ Wait a few minutes for NuGet.org synchronization" -ForegroundColor White
-        Write-Host "2. 🧪 Verify: https://www.nuget.org/packages/Optivem.Testing/${releaseVersion}" -ForegroundColor White
-        Write-Host ""
-        Write-Host "✅ Same artifacts that passed RC testing are now released!" -ForegroundColor Green
-    
+
     - name: Create release summary
       run: |
-        echo "## 🎉 Release Stage Completed" >> $GITHUB_STEP_SUMMARY
+        echo "## ✅ .NET Release Stage Completed" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
         echo "**Release Version:** \`${{ steps.validate.outputs.release-version }}\`" >> $GITHUB_STEP_SUMMARY
         echo "**Promoted from RC:** \`${{ steps.find-rc.outputs.rc-version }}\`" >> $GITHUB_STEP_SUMMARY
@@ -162,11 +122,5 @@ jobs:
         echo "- ✅ Repacked and published to NuGet.org" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Waited for NuGet.org indexing" >> $GITHUB_STEP_SUMMARY
         echo "- ✅ Ran release smoke tests" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Created Git tag v${{ steps.validate.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
-        echo "- ✅ Created GitHub Release" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Status:** 🎉 Release published successfully!" >> $GITHUB_STEP_SUMMARY
-        echo "" >> $GITHUB_STEP_SUMMARY
-        echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
-        echo "- ⏳ Wait for NuGet.org synchronization (may take a few minutes)" >> $GITHUB_STEP_SUMMARY
-        echo "- 🧪 Verify: https://www.nuget.org/packages/Optivem.Testing/${{ steps.validate.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
+        echo "**NuGet Package:** https://www.nuget.org/packages/Optivem.Testing/${{ steps.validate.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY

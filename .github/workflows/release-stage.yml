@@ -1,0 +1,167 @@
+name: Release Stage
+
+on:
+  workflow_dispatch:
+    inputs:
+      dotnet_rc_version:
+        description: '.NET RC version (e.g., 1.1.0-rc.6, or leave blank for latest RC)'
+        required: false
+        type: string
+      java_rc_version:
+        description: 'Java RC version (e.g., 1.1.0-rc.12, or leave blank for latest RC)'
+        required: false
+        type: string
+      typescript_rc_version:
+        description: 'TypeScript RC version (e.g., 1.1.0-rc.3, or leave blank for latest RC)'
+        required: false
+        type: string
+
+jobs:
+  # Pre-flight checks before starting any language releases
+  preflight:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      proceed: ${{ steps.checks.outputs.proceed }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Pre-flight validation
+        id: checks
+        run: |
+          echo "✅ Pre-flight checks passed"
+          echo "proceed=true" >> $GITHUB_OUTPUT
+
+  # Run all three language releases in parallel
+  release-dotnet:
+    needs: preflight
+    if: needs.preflight.outputs.proceed == 'true'
+    uses: ./.github/workflows/dotnet-release-stage.yml
+    with:
+      rc_version: ${{ inputs.dotnet_rc_version }}
+    secrets: inherit
+
+  release-java:
+    needs: preflight
+    if: needs.preflight.outputs.proceed == 'true'
+    uses: ./.github/workflows/java-release-stage.yml
+    with:
+      rc_version: ${{ inputs.java_rc_version }}
+    secrets: inherit
+
+  release-typescript:
+    needs: preflight
+    if: needs.preflight.outputs.proceed == 'true'
+    uses: ./.github/workflows/typescript-release-stage.yml
+    with:
+      rc_version: ${{ inputs.typescript_rc_version }}
+    secrets: inherit
+
+  # After all language releases succeed, create a single tag and GitHub Release
+  create-release:
+    needs: [release-dotnet, release-java, release-typescript]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate release versions match
+        id: version
+        run: |
+          DOTNET_VERSION="${{ needs.release-dotnet.outputs.release-version }}"
+          JAVA_VERSION="${{ needs.release-java.outputs.release-version }}"
+          TS_VERSION="${{ needs.release-typescript.outputs.release-version }}"
+
+          echo "Dotnet release version: $DOTNET_VERSION"
+          echo "Java release version:   $JAVA_VERSION"
+          echo "TypeScript release version: $TS_VERSION"
+
+          if [ "$DOTNET_VERSION" != "$JAVA_VERSION" ] || [ "$DOTNET_VERSION" != "$TS_VERSION" ]; then
+            echo "::error::Release version mismatch! .NET=$DOTNET_VERSION, Java=$JAVA_VERSION, TypeScript=$TS_VERSION"
+            exit 1
+          fi
+
+          echo "release-version=$DOTNET_VERSION" >> $GITHUB_OUTPUT
+          echo "✅ All language release versions match: $DOTNET_VERSION"
+
+      - name: Check if Git tag already exists
+        uses: optivem/check-tag-exists-action@v1
+        with:
+          tag-name: v${{ steps.version.outputs.release-version }}
+
+      - name: Create Git tag
+        uses: optivem/create-tag-action@v1
+        with:
+          tag-name: v${{ steps.version.outputs.release-version }}
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.release-version }}
+          name: Release ${{ steps.version.outputs.release-version }}
+          body: |
+            🎉 **Release ${{ steps.version.outputs.release-version }}**
+
+            All language packages promoted from RC after passing acceptance tests.
+
+            **Promoted Artifacts:**
+            - Same exact packages that passed RC testing
+            - No rebuild — identical artifacts guaranteed
+            - ✅ All release smoke tests passed
+
+            ---
+
+            ### .NET (NuGet)
+            **Promoted from:** `${{ needs.release-dotnet.outputs.rc-version }}`
+            ```bash
+            dotnet add package Optivem.Testing --version ${{ steps.version.outputs.release-version }}
+            ```
+            📦 https://www.nuget.org/packages/Optivem.Testing/${{ steps.version.outputs.release-version }}
+
+            ### Java (Maven Central)
+            **Promoted from:** `${{ needs.release-java.outputs.rc-version }}`
+            ```xml
+            <dependency>
+                <groupId>com.optivem</groupId>
+                <artifactId>optivem-testing</artifactId>
+                <version>${{ steps.version.outputs.release-version }}</version>
+            </dependency>
+            ```
+            📦 https://central.sonatype.com/artifact/com.optivem/optivem-testing/${{ steps.version.outputs.release-version }}
+
+            ### TypeScript (npm)
+            **Promoted from:** `${{ needs.release-typescript.outputs.rc-version }}`
+            ```bash
+            npm install @optivem/optivem-testing@${{ steps.version.outputs.release-version }}
+            ```
+            📦 https://www.npmjs.com/package/@optivem/optivem-testing/v/${{ steps.version.outputs.release-version }}
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+
+      - name: Display summary
+        run: |
+          RELEASE_VERSION="${{ steps.version.outputs.release-version }}"
+          echo "## 🎉 Release Stage Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Release Version:** \`${RELEASE_VERSION}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Language Releases" >> $GITHUB_STEP_SUMMARY
+          echo "| Language | RC Version | Registry | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|----------|-----------|----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| .NET | \`${{ needs.release-dotnet.outputs.rc-version }}\` | [NuGet](https://www.nuget.org/packages/Optivem.Testing/${RELEASE_VERSION}) | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| Java | \`${{ needs.release-java.outputs.rc-version }}\` | [Maven Central](https://central.sonatype.com/artifact/com.optivem/optivem-testing/${RELEASE_VERSION}) | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "| TypeScript | \`${{ needs.release-typescript.outputs.rc-version }}\` | [npm](https://www.npmjs.com/package/@optivem/optivem-testing/v/${RELEASE_VERSION}) | ✅ |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Release Artifacts" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ Git tag \`v${RELEASE_VERSION}\` created" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ GitHub Release created" >> $GITHUB_STEP_SUMMARY
+          echo "- ✅ All release smoke tests passed" >> $GITHUB_STEP_SUMMARY

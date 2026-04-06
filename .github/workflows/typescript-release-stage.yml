@@ -7,6 +7,22 @@ on:
         description: 'RC version to promote (e.g., 1.0.1-rc.47, or leave blank for latest RC)'
         required: false
         type: string
+  workflow_call:
+    inputs:
+      rc_version:
+        description: 'RC version to promote (e.g., 1.0.1-rc.47, or leave blank for latest RC)'
+        required: false
+        type: string
+    outputs:
+      release-version:
+        description: 'The release version that was published'
+        value: ${{ jobs.promote-rc-to-release.outputs.release-version }}
+      rc-version:
+        description: 'The RC version that was promoted'
+        value: ${{ jobs.promote-rc-to-release.outputs.rc-version }}
+    secrets:
+      NPM_TOKEN:
+        required: true
 
 jobs:
   promote-rc-to-release:
@@ -16,8 +32,11 @@ jobs:
       run:
         working-directory: typescript
     permissions:
-      contents: write
+      contents: read
       packages: read
+    outputs:
+      release-version: ${{ steps.version.outputs.release-version }}
+      rc-version: ${{ steps.find-rc.outputs.rc-version }}
 
     steps:
       - name: Checkout code
@@ -32,7 +51,7 @@ jobs:
         id: find-rc
         uses: ./.github/actions/find-latest-npm-rc-version
         with:
-          rc-version: ${{ github.event.inputs.rc_version }}
+          rc-version: ${{ inputs.rc_version }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Extract release version
@@ -42,13 +61,6 @@ jobs:
           RELEASE_VERSION=$(echo "$RC_VERSION" | sed 's/-rc\.[0-9]*$//')
           echo "release-version=$RELEASE_VERSION" >> $GITHUB_OUTPUT
           echo "Release version: $RELEASE_VERSION"
-
-      - name: Check if Git tag already exists
-        run: |
-          if git ls-remote --tags origin "refs/tags/v${{ steps.version.outputs.release-version }}" | grep -q .; then
-            echo "::error::Tag v${{ steps.version.outputs.release-version }} already exists"
-            exit 1
-          fi
 
       - name: Download RC package from GitHub Packages
         uses: ./.github/actions/download-npm-rc-artifacts
@@ -80,41 +92,9 @@ jobs:
           echo "✅ Successfully resolved release package from npm"
           npm test
 
-      - name: Create Git tag
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v${{ steps.version.outputs.release-version }}" -m "Release v${{ steps.version.outputs.release-version }}"
-          git push origin "v${{ steps.version.outputs.release-version }}"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ steps.version.outputs.release-version }}
-          name: Release ${{ steps.version.outputs.release-version }}
-          body: |
-            🎉 **Release ${{ steps.version.outputs.release-version }}**
-
-            Promoted from RC version `${{ steps.find-rc.outputs.rc-version }}` after passing all acceptance tests.
-
-            **Promoted Artifacts:**
-            - Same exact package that passed RC testing
-            - No rebuild — identical artifacts guaranteed
-
-            **Installation:**
-            ```bash
-            npm install @optivem/optivem-testing@${{ steps.version.outputs.release-version }}
-            ```
-
-            **npm Package:**
-            https://www.npmjs.com/package/@optivem/optivem-testing/v/${{ steps.version.outputs.release-version }}
-          generate_release_notes: true
-          draft: false
-          prerelease: false
-
       - name: Create release summary
         run: |
-          echo "## 🎉 Release Stage Completed" >> $GITHUB_STEP_SUMMARY
+          echo "## ✅ TypeScript Release Stage Completed" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "**Release Version:** \`${{ steps.version.outputs.release-version }}\`" >> $GITHUB_STEP_SUMMARY
           echo "**Promoted from RC:** \`${{ steps.find-rc.outputs.rc-version }}\`" >> $GITHUB_STEP_SUMMARY
@@ -124,7 +104,5 @@ jobs:
           echo "- ✅ Repacked with release version (same artifacts, no rebuild)" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Published to npm" >> $GITHUB_STEP_SUMMARY
           echo "- ✅ Ran release smoke tests against npm" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Created Git tag v${{ steps.version.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
-          echo "- ✅ Created GitHub Release" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "**Status:** 🎉 Release published successfully!" >> $GITHUB_STEP_SUMMARY
+          echo "**npm Package:** https://www.npmjs.com/package/@optivem/optivem-testing/v/${{ steps.version.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
