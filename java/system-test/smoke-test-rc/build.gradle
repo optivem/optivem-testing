@@ -1,7 +1,7 @@
 repositories {
     maven {
         name = "GitHubPackages"
-        url = uri("https://maven.pkg.github.com/optivem/optivem-testing-java")
+        url = uri("https://maven.pkg.github.com/optivem/optivem-testing")
         credentials {
             username = System.getenv("GITHUB_USERNAME")
             password = System.getenv("GITHUB_READ_PACKAGES_TOKEN")

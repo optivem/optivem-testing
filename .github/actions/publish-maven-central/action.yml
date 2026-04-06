@@ -30,7 +30,7 @@ inputs:
   project-url:
     description: 'Project URL'
     required: false
-    default: 'https://github.com/optivem/optivem-testing-java'
+    default: 'https://github.com/optivem/optivem-testing'
   license-name:
     description: 'License name'
     required: false
@@ -54,15 +54,15 @@ inputs:
   scm-connection:
     description: 'SCM connection URL'
     required: false
-    default: 'scm:git:git://github.com/optivem/optivem-testing-java.git'
+    default: 'scm:git:git://github.com/optivem/optivem-testing.git'
   scm-developer-connection:
     description: 'SCM developer connection URL'
     required: false
-    default: 'scm:git:ssh://github.com:optivem/optivem-testing-java.git'
+    default: 'scm:git:ssh://github.com:optivem/optivem-testing.git'
   scm-url:
     description: 'SCM URL'
     required: false
-    default: 'https://github.com/optivem/optivem-testing-java'
+    default: 'https://github.com/optivem/optivem-testing'
 
 outputs:
   deployment-id:
