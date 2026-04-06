@@ -86,7 +86,7 @@ jobs:
     - name: Restore release smoke test dependencies (retry)
       uses: ./.github/actions/dotnet-restore-with-retry
       with:
-        project-path: SystemTest/Optivem.Testing.SystemTest.SmokeTestRelease/Optivem.Testing.SystemTest.SmokeTestRelease.csproj
+        project-path: dotnet/SystemTest/Optivem.Testing.SystemTest.SmokeTestRelease/Optivem.Testing.SystemTest.SmokeTestRelease.csproj
         version: ${{ steps.validate.outputs.release-version }}
         max-retries: '5'
         interval-seconds: '30'
@@ -94,7 +94,7 @@ jobs:
     - name: Run release smoke tests (NuGet.org)
       run: |
         echo "🧪 Running release smoke tests..."
-        dotnet test SystemTest/Optivem.Testing.SystemTest.SmokeTestRelease/Optivem.Testing.SystemTest.SmokeTestRelease.csproj --no-restore -p:Version="${{ steps.validate.outputs.release-version }}"
+        dotnet test dotnet/SystemTest/Optivem.Testing.SystemTest.SmokeTestRelease/Optivem.Testing.SystemTest.SmokeTestRelease.csproj --no-restore -p:Version="${{ steps.validate.outputs.release-version }}"
     
     - name: Create Git tag
       uses: optivem/create-tag-action@v1

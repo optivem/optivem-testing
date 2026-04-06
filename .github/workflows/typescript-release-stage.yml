@@ -74,7 +74,7 @@ jobs:
           release-version: ${{ steps.version.outputs.release-version }}
 
       - name: Run release smoke tests (npm)
-        working-directory: system-test/smoke-test-release
+        working-directory: typescript/system-test/smoke-test-release
         run: |
           npm install @optivem/optivem-testing@${{ steps.version.outputs.release-version }} --prefer-online
           echo "✅ Successfully resolved release package from npm"

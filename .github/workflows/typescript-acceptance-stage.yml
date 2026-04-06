@@ -37,7 +37,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Test dependency resolution (GitHub Packages)
-        working-directory: system-test/smoke-test-rc
+        working-directory: typescript/system-test/smoke-test-rc
         run: |
           npm install --prefer-online
           echo "✅ Successfully resolved RC package from GitHub Packages"
@@ -45,7 +45,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run acceptance tests (GitHub Packages)
-        working-directory: system-test/smoke-test-rc
+        working-directory: typescript/system-test/smoke-test-rc
         run: npm test
 
       - name: Create acceptance summary

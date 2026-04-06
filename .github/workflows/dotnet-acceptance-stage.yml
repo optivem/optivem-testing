@@ -37,13 +37,13 @@ jobs:
           --store-password-in-clear-text
     
     - name: Test dependency resolution (GitHub Packages)
-      working-directory: SystemTest/Optivem.Testing.SystemTest.SmokeTestRc
+      working-directory: dotnet/SystemTest/Optivem.Testing.SystemTest.SmokeTestRc
       run: |
         dotnet restore --force --no-cache
         echo "✅ Successfully resolved RC package from GitHub Packages"
     
     - name: Run acceptance tests (GitHub Packages)
-      working-directory: SystemTest/Optivem.Testing.SystemTest.SmokeTestRc
+      working-directory: dotnet/SystemTest/Optivem.Testing.SystemTest.SmokeTestRc
       run: dotnet test --no-restore --verbosity normal --configuration Release
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
