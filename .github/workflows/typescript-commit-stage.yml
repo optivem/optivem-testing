@@ -57,7 +57,7 @@ jobs:
         run: echo "rc-version=${{ steps.base-version.outputs.version }}-rc.${{ github.run_number }}" >> $GITHUB_OUTPUT
 
       - name: Publish RC to GitHub Packages
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        if: github.ref == 'refs/heads/main'
         run: |
           echo "@optivem:registry=https://npm.pkg.github.com" >> .npmrc
           echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
