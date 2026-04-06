@@ -94,7 +94,7 @@ jobs:
     - name: Run release smoke tests (NuGet.org)
       run: |
         echo "🧪 Running release smoke tests..."
-        dotnet test dotnet/SystemTest/Optivem.Testing.SystemTest.SmokeTestRelease/Optivem.Testing.SystemTest.SmokeTestRelease.csproj --no-restore -p:Version="${{ steps.validate.outputs.release-version }}"
+        dotnet test SystemTest/Optivem.Testing.SystemTest.SmokeTestRelease/Optivem.Testing.SystemTest.SmokeTestRelease.csproj --no-restore -p:Version="${{ steps.validate.outputs.release-version }}"
     
     - name: Create Git tag
       uses: optivem/create-tag-action@v1
