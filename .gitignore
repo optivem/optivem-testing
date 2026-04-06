@@ -1,0 +1,22 @@
+# Java
+java/.gradle/
+java/build/
+java/core/build/
+java/system-test/**/build/
+java/*.jar
+
+# .NET
+dotnet/**/bin/
+dotnet/**/obj/
+dotnet/**/*.user
+
+# TypeScript
+typescript/node_modules/
+typescript/dist/
+typescript/coverage/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo

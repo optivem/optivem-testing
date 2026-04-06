@@ -1,0 +1,78 @@
+name: TypeScript Commit Stage
+
+on:
+  push:
+    branches: ["main"]
+    paths: ['typescript/**']
+  pull_request:
+    branches: ["main"]
+    paths: ['typescript/**']
+  workflow_dispatch:
+
+concurrency:
+  group: typescript-commit-stage
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    name: Build & Test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: typescript
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      rc-version: ${{ steps.version.outputs.rc-version }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Compile TypeScript
+        run: npm run build
+
+      - name: Run tests
+        run: npm test
+
+      - name: Extract base version
+        id: base-version
+        uses: ./.github/actions/extract-npm-version
+
+      - name: Generate RC version
+        id: version
+        run: echo "rc-version=${{ steps.base-version.outputs.version }}-rc.${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+      - name: Publish RC to GitHub Packages
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "@optivem:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> .npmrc
+          npm version ${{ steps.version.outputs.rc-version }} --no-git-tag-version
+          npm publish --access public --tag rc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create commit stage summary
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        run: |
+          echo "## ✅ Commit Stage Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**RC Version Published:** \`${{ steps.version.outputs.rc-version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🚀 **Actions Completed:**" >> $GITHUB_STEP_SUMMARY
+          echo "- Built and tested library" >> $GITHUB_STEP_SUMMARY
+          echo "- Published RC to GitHub Packages" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Step:** RC will be automatically tested in acceptance stage" >> $GITHUB_STEP_SUMMARY
+

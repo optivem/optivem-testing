@@ -1,0 +1,29 @@
+name: 'Download NuGet RC Artifacts'
+description: 'Downloads NuGet RC artifacts from GitHub Packages'
+
+inputs:
+  rc-version:
+    description: 'RC version to download'
+    required: true
+  github-username:
+    description: 'GitHub username for authentication'
+    required: true
+  github-token:
+    description: 'GitHub token for authentication'
+    required: true
+  repository:
+    description: 'GitHub repository (owner/repo)'
+    required: false
+    default: ${{ github.repository }}
+  package-name:
+    description: 'NuGet package name'
+    required: false
+    default: 'Optivem.Testing'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download NuGet RC artifacts
+      shell: pwsh
+      run: |
+        ${{ github.action_path }}/download-nuget-rc-artifacts.ps1 -RcVersion "${{ inputs.rc-version }}" -GitHubUsername "${{ inputs.github-username }}" -GitHubToken "${{ inputs.github-token }}" -Repository "${{ inputs.repository }}" -PackageName "${{ inputs.package-name }}"

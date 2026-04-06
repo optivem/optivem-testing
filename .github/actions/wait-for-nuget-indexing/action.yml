@@ -1,0 +1,30 @@
+name: 'Wait for NuGet.org Indexing'
+description: 'Polls NuGet.org until package version is indexed and available'
+
+inputs:
+  package-name:
+    description: 'NuGet package name'
+    required: true
+  version:
+    description: 'Package version to wait for'
+    required: true
+  max-retries:
+    description: 'Maximum number of polling attempts'
+    required: false
+    default: '30'
+  interval-seconds:
+    description: 'Seconds between polling attempts'
+    required: false
+    default: '10'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Wait for package indexing
+      uses: optivem/poll-until-action@v1
+      with:
+        check-script: '.github/actions/wait-for-nuget-indexing/check-nuget-available.ps1'
+        script-args: '${{ inputs.package-name }} ${{ inputs.version }}'
+        max-retries: '${{ inputs.max-retries }}'
+        interval-seconds: '${{ inputs.interval-seconds }}'
+        condition-name: 'NuGet.org indexing of ${{ inputs.package-name }} ${{ inputs.version }}'

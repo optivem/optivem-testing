@@ -1,0 +1,209 @@
+name: Java Release Stage
+
+on:
+  workflow_dispatch:
+    inputs:
+      rc_version:
+        description: 'RC version to promote (e.g., 1.0.5-rc.47, or leave blank for latest RC)'
+        required: false
+        type: string
+
+jobs:
+  promote-rc-to-release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: java
+    permissions:
+      contents: write
+      packages: write
+    
+    env:
+      SONATYPE_USERNAME: ${{ secrets.SONATYPE_USERNAME }}
+      SONATYPE_PASSWORD: ${{ secrets.SONATYPE_PASSWORD }}
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Find latest RC version if not provided
+      id: find-rc
+      uses: ./.github/actions/find-latest-maven-rc-version
+      with:
+        rc-version: ${{ github.event.inputs.rc_version }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        package-name: 'com.optivem.optivem-testing'
+      
+    - name: Extract release version
+      id: validate
+      uses: optivem/extract-release-version-action@v1
+      with:
+        prerelease-version: ${{ steps.find-rc.outputs.rc-version }}
+        
+    - name: Check if Git tag exists
+      uses: optivem/check-tag-exists-action@v1
+      with:
+        tag-name: v${{ steps.validate.outputs.release-version }}
+    - name: Check if GitHub Release exists
+      id: check-release
+      uses: optivem/check-release-exists-action@v2
+      with:
+        version: v${{ steps.validate.outputs.release-version }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Fail if release already exists
+      if: steps.check-release.outputs.exists == 'true'
+      run: |
+        echo "::error::Release v${{ steps.validate.outputs.release-version }} already exists. Cannot promote RC to an existing release."
+        exit 1
+    - name: Check if Maven package version exists
+      uses: ./.github/actions/check-maven-package-exists
+      with:
+        release-version: ${{ steps.validate.outputs.release-version }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+        
+    - name: Download RC artifacts
+      uses: ./.github/actions/download-maven-rc-artifacts
+      with:
+        rc-version: ${{ steps.find-rc.outputs.rc-version }}
+        github-username: ${{ github.actor }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        
+    - name: Prepare release artifacts
+      uses: ./.github/actions/prepare-maven-release-artifacts
+      with:
+        rc-version: ${{ steps.find-rc.outputs.rc-version }}
+        release-version: ${{ steps.validate.outputs.release-version }}
+      
+    - name: Upload release to Maven Central
+      id: upload
+      uses: ./.github/actions/publish-maven-central
+      with:
+        release-version: ${{ steps.validate.outputs.release-version }}
+        gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+        gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
+    
+    - name: Wait for deployment validation
+      uses: ./.github/actions/wait-for-deployment-validation
+      with:
+        deployment-id: ${{ steps.upload.outputs.deployment-id }}
+        expected-state: 'VALIDATED'
+        max-attempts: '60'
+        poll-interval: '10'
+    
+    - name: Publish deployment on Maven Central
+      uses: ./.github/actions/publish-central-deployment
+      with:
+        deployment-id: ${{ steps.upload.outputs.deployment-id }}
+        release-version: ${{ steps.validate.outputs.release-version }}
+    
+    - name: Wait for publishing to start
+      uses: ./.github/actions/wait-for-deployment-validation
+      with:
+        deployment-id: ${{ steps.upload.outputs.deployment-id }}
+        expected-state: 'PUBLISHING'
+        max-attempts: '60'
+        poll-interval: '10'
+    
+    - name: Wait for publishing to complete
+      uses: ./.github/actions/wait-for-deployment-validation
+      with:
+        deployment-id: ${{ steps.upload.outputs.deployment-id }}
+        expected-state: 'PUBLISHED'
+        max-attempts: '120'
+        poll-interval: '60'
+        
+    - name: Wait for Maven Central availability
+      uses: ./.github/actions/wait-for-maven-central
+      with:
+        release-version: ${{ steps.validate.outputs.release-version }}
+        max-attempts: '120'
+        poll-interval: '60'
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: 21
+        distribution: 'temurin'
+        
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: wrapper
+        
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+        
+    - name: Run release smoke tests (Maven Central)
+      run: |
+        echo "🧪 Running release smoke tests..."
+        ./gradlew system-test:smoke-test-release:test --no-daemon -Pversion="${{ steps.validate.outputs.release-version }}"
+        
+    - name: Create Git tag
+      uses: optivem/create-tag-action@v1
+      with:
+        tag-name: v${{ steps.validate.outputs.release-version }}
+        
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v${{ steps.validate.outputs.release-version }}
+        name: Release ${{ steps.validate.outputs.release-version }}
+        body: |
+          🎉 **Release ${{ steps.validate.outputs.release-version }}**
+          
+          This release was promoted from RC version `${{ steps.find-rc.outputs.rc-version }}` after passing all acceptance tests.
+          
+          **Promoted Artifacts:**
+          - Same exact JAR that passed testing
+          - No rebuild - identical artifacts guaranteed
+          - ✅ Automatically published to Maven Central
+          
+          **Next Steps:**
+          🧪 Verify availability: `.\trigger-verification.ps1 -Version "${{ steps.validate.outputs.release-version }}"`
+          
+          **Note:** Maven Central synchronization may take a few minutes to hours.
+        files: |
+          core/build/libs/*.jar
+        generate_release_notes: true
+        draft: false
+        prerelease: false
+        
+    - name: Display next steps
+      shell: pwsh
+      run: |
+        $releaseVersion = "${{ steps.validate.outputs.release-version }}"
+        Write-Host ""
+        Write-Host "🎉 Release promotion completed successfully!" -ForegroundColor Green
+        Write-Host ""
+        Write-Host "📋 What happened:" -ForegroundColor Cyan
+        Write-Host "1. ✅ Downloaded RC artifacts from GitHub Packages" -ForegroundColor White
+        Write-Host "2. ✅ Uploaded and published to Maven Central (same artifacts, no rebuild)" -ForegroundColor White
+        Write-Host "3. ✅ Created Git tag v${releaseVersion}" -ForegroundColor White
+        Write-Host "4. ✅ Created GitHub Release" -ForegroundColor White
+        Write-Host ""
+        Write-Host "📋 Next Steps:" -ForegroundColor Cyan
+        Write-Host "1. ⏳ Wait a few minutes for Maven Central synchronization" -ForegroundColor White
+        Write-Host "2. 🧪 Verify: .\trigger-verification.ps1 -Version `"${releaseVersion}`"" -ForegroundColor White
+        Write-Host ""
+        Write-Host "✅ Same artifacts that passed RC testing are now released!" -ForegroundColor Green
+        
+    - name: Create release summary
+      run: |
+        echo "## 🎉 Release Stage Completed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Release Version:** \`${{ steps.validate.outputs.release-version }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "**Promoted from RC:** \`${{ steps.validate.outputs.rc-version }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🚀 **Release Activities:**" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Downloaded RC artifacts from GitHub Packages" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Uploaded and published to Maven Central" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Created Git tag v${{ steps.validate.outputs.release-version }}" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Created GitHub Release" >> $GITHUB_STEP_SUMMARY
+        echo "- ✅ Ran release smoke tests" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** 🎉 Release published successfully!" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Next Steps:**" >> $GITHUB_STEP_SUMMARY
+        echo "- ⏳ Wait for Maven Central synchronization (may take a few minutes to hours)" >> $GITHUB_STEP_SUMMARY
+        echo "- 🧪 Verify availability using: \`trigger-verification.ps1 -Version \"${{ steps.validate.outputs.release-version }}\"\`" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,97 @@
+name: 'Publish Maven Central'
+description: 'Creates bundle from existing artifacts and uploads to Maven Central without rebuilding'
+
+inputs:
+  release-version:
+    description: 'Release version to upload'
+    required: true
+  gpg-private-key:
+    description: 'GPG private key for signing'
+    required: true
+  gpg-passphrase:
+    description: 'GPG passphrase'
+    required: true
+  group-id:
+    description: 'Maven group ID'
+    required: false
+    default: 'com.optivem'
+  artifact-id:
+    description: 'Maven artifact ID'
+    required: false
+    default: 'optivem-testing'
+  project-name:
+    description: 'Project display name'
+    required: false
+    default: 'Optivem Test Library'
+  project-description:
+    description: 'Project description'
+    required: false
+    default: 'A simple calculator library for testing purposes'
+  project-url:
+    description: 'Project URL'
+    required: false
+    default: 'https://github.com/optivem/optivem-testing-java'
+  license-name:
+    description: 'License name'
+    required: false
+    default: 'MIT License'
+  license-url:
+    description: 'License URL'
+    required: false
+    default: 'https://opensource.org/licenses/MIT'
+  developer-id:
+    description: 'Developer ID'
+    required: false
+    default: 'optivem'
+  developer-name:
+    description: 'Developer name'
+    required: false
+    default: 'Optivem'
+  developer-email:
+    description: 'Developer email'
+    required: false
+    default: 'info@optivem.com'
+  scm-connection:
+    description: 'SCM connection URL'
+    required: false
+    default: 'scm:git:git://github.com/optivem/optivem-testing-java.git'
+  scm-developer-connection:
+    description: 'SCM developer connection URL'
+    required: false
+    default: 'scm:git:ssh://github.com:optivem/optivem-testing-java.git'
+  scm-url:
+    description: 'SCM URL'
+    required: false
+    default: 'https://github.com/optivem/optivem-testing-java'
+
+outputs:
+  deployment-id:
+    description: 'Maven Central deployment ID'
+    value: ${{ steps.upload.outputs.deployment-id }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Publish to Maven Central
+      id: upload
+      shell: pwsh
+      run: |
+        ${{ github.action_path }}/publish-maven-central.ps1 `
+          -ReleaseVersion "${{ inputs.release-version }}" `
+          -SonatypeUsername "$env:SONATYPE_USERNAME" `
+          -SonatypePassword "$env:SONATYPE_PASSWORD" `
+          -GpgPrivateKey "${{ inputs.gpg-private-key }}" `
+          -GpgPassphrase "${{ inputs.gpg-passphrase }}" `
+          -GroupId "${{ inputs.group-id }}" `
+          -ArtifactId "${{ inputs.artifact-id }}" `
+          -ProjectName "${{ inputs.project-name }}" `
+          -ProjectDescription "${{ inputs.project-description }}" `
+          -ProjectUrl "${{ inputs.project-url }}" `
+          -LicenseName "${{ inputs.license-name }}" `
+          -LicenseUrl "${{ inputs.license-url }}" `
+          -DeveloperId "${{ inputs.developer-id }}" `
+          -DeveloperName "${{ inputs.developer-name }}" `
+          -DeveloperEmail "${{ inputs.developer-email }}" `
+          -ScmConnection "${{ inputs.scm-connection }}" `
+          -ScmDeveloperConnection "${{ inputs.scm-developer-connection }}" `
+          -ScmUrl "${{ inputs.scm-url }}"

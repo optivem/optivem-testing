@@ -1,0 +1,34 @@
+name: 'Dotnet Restore with Retry'
+description: 'Restores a .NET project with retry and backoff'
+
+inputs:
+  project-path:
+    description: 'Path to the .csproj to restore'
+    required: true
+  version:
+    description: 'Package version to pass via -p:Version'
+    required: true
+  max-retries:
+    description: 'Maximum number of restore attempts'
+    required: false
+    default: '5'
+  interval-seconds:
+    description: 'Seconds to wait between attempts'
+    required: false
+    default: '30'
+  extra-args:
+    description: 'Additional arguments for dotnet restore'
+    required: false
+    default: ''
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Restore with retry
+      uses: optivem/poll-until-action@v1
+      with:
+        check-script: '.github/actions/dotnet-restore-with-retry/check-dotnet-restore.ps1'
+        script-args: '${{ inputs.project-path }} ${{ inputs.version }} ${{ inputs.extra-args }}'
+        max-retries: '${{ inputs.max-retries }}'
+        interval-seconds: '${{ inputs.interval-seconds }}'
+        condition-name: 'dotnet restore of ${{ inputs.project-path }}'

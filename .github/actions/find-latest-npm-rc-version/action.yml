@@ -1,0 +1,39 @@
+name: Find Latest npm RC Version
+description: Finds the latest npm RC version from GitHub Packages if no version is provided
+
+inputs:
+  rc-version:
+    description: RC version to use (optional - if empty, will find latest)
+    required: false
+    default: ''
+  github-token:
+    description: GitHub token for API access
+    required: true
+  package-name:
+    description: npm package name in GitHub Packages (without scope)
+    required: false
+    default: 'optivem-testing'
+
+outputs:
+  rc-version:
+    description: The RC version to use
+    value: ${{ steps.find.outputs.rc-version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Find latest RC version
+      id: find
+      shell: pwsh
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        $RcVersion = "${{ inputs.rc-version }}"
+        $PackageName = "${{ inputs.package-name }}"
+        $owner = "${{ github.repository_owner }}"
+
+        & "${{ github.action_path }}/find-latest-npm-rc-version.ps1" `
+          -RcVersion $RcVersion `
+          -GitHubToken $env:GITHUB_TOKEN `
+          -Repository "${{ github.repository }}" `
+          -PackageName $PackageName

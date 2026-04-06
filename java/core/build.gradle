@@ -1,0 +1,262 @@
+plugins {
+    id 'java-library'
+    id 'jacoco'
+    id 'maven-publish'
+    id 'signing'
+    id 'com.gradleup.nmcp' version '0.0.9'
+}
+
+repositories {
+    mavenCentral()
+}
+
+// Set version explicitly if not provided
+if (!project.hasProperty('version') || version == 'unspecified') {
+    version = rootProject.ext.baseVersion
+}
+
+dependencies {
+    // Main dependencies for test extensions and utilities
+    implementation 'org.junit.jupiter:junit-jupiter-api:5.11.2'
+    implementation 'org.junit.jupiter:junit-jupiter-params:5.11.2'
+    
+    // Test dependencies
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.2'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+    withJavadocJar()
+    withSourcesJar()
+}
+
+test {
+    useJUnitPlatform()
+    finalizedBy jacocoTestReport
+}
+
+jacoco {
+    toolVersion = "0.8.12"
+}
+
+jacocoTestReport {
+    reports {
+        xml.required = true
+        html.required = true
+    }
+}
+
+publishing {
+    publications {
+        maven(MavenPublication) {
+            // Set the correct artifact name to maintain compatibility
+            artifactId = 'optivem-testing'
+            from components.java
+            
+            pom {
+                name = 'Optivem Testing Library'
+                description = 'JUnit Jupiter extension for running tests across multiple channels with parameterized testing support'
+                url = 'https://github.com/optivem/optivem-testing-java'
+                
+                licenses {
+                    license {
+                        name = 'MIT License'
+                        url = 'https://opensource.org/licenses/MIT'
+                    }
+                }
+                
+                developers {
+                    developer {
+                        id = 'optivem'
+                        name = 'Optivem'
+                        email = 'info@optivem.com'
+                    }
+                }
+                
+                scm {
+                    connection = 'scm:git:git://github.com/optivem/optivem-testing-java.git'
+                    developerConnection = 'scm:git:ssh://github.com:optivem/optivem-testing-java.git'
+                    url = 'https://github.com/optivem/optivem-testing-java'
+                }
+            }
+        }
+    }
+    
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/optivem/optivem-testing-java")
+            credentials {
+                username = System.getenv("GITHUB_USERNAME")
+                password = System.getenv("GITHUB_WRITE_PACKAGES_TOKEN")
+            }
+        }
+    }
+}
+
+nmcp {
+    publish("maven") {
+        username = System.getenv("SONATYPE_USERNAME")
+        password = System.getenv("SONATYPE_PASSWORD")
+        publicationType = "USER_MANAGED"
+    }
+}
+
+// Signing configuration - always enabled for Central Portal
+def signingKeyPath = System.getenv("GPG_PRIVATE_KEY")
+def signingPassword = System.getenv("GPG_PASSPHRASE")
+
+if (signingKeyPath && signingPassword) {
+    signing {
+        required = { gradle.taskGraph.hasTask("publishMavenPublicationToMavenCentralRepository") || gradle.taskGraph.hasTask("publishAllPublicationsToNmcpMavenRepository") || gradle.taskGraph.hasTask("publishMavenPublicationToNmcpMavenRepository") }
+        
+        // Check if it's a file path or the actual key content
+        def keyFile = new File(signingKeyPath)
+        if (keyFile.exists()) {
+            // Read key from file
+            def signingKey = keyFile.text
+            useInMemoryPgpKeys(signingKey, signingPassword)
+        } else {
+            // Treat as direct key content (fallback)
+            useInMemoryPgpKeys(signingKeyPath, signingPassword)
+        }
+        sign publishing.publications.maven
+    }
+    
+    // Ensure nmcp tasks depend on signing
+    tasks.withType(PublishToMavenRepository).configureEach { task ->
+        if (task.name.contains("Nmcp")) {
+            task.dependsOn tasks.withType(Sign)
+        }
+    }
+}
+
+task createCentralPortalBundle {
+    dependsOn 'publishToMavenLocal'
+    description 'Create a bundle for Sonatype Central Portal upload with proper structure'
+    
+    doLast {
+        def username = System.getenv("SONATYPE_USERNAME")
+        def password = System.getenv("SONATYPE_PASSWORD")
+        def projectVersion = project.version
+        
+        if (!username || !password) {
+            throw new GradleException("SONATYPE_USERNAME and SONATYPE_PASSWORD environment variables must be set")
+        }
+        
+        def localRepo = "${System.getProperty('user.home')}/.m2/repository"
+        def artifactPath = "${localRepo}/com/optivem/optivem-testing/${projectVersion}"
+        def buildPath = layout.buildDirectory.get().asFile.absolutePath
+        def bundleDir = "${buildPath}/central-portal-bundle"
+        def mavenDir = "${bundleDir}/com/optivem/optivem-testing/${projectVersion}"
+        def bundleZip = "${buildPath}/optivem-testing-${projectVersion}.zip"
+        
+        println "Creating bundle for Central Portal upload..."
+        println "Username: ${username}"
+        println "Version: ${projectVersion}"
+        println "Artifact path: ${artifactPath}"
+        println "Bundle path: ${bundleZip}"
+        
+        // Create bundle directory structure
+        delete bundleDir
+        mkdir mavenDir
+        
+        // Copy all artifacts with checksums and signatures
+        def filesToCopy = [
+            "optivem-testing-${projectVersion}.pom",
+            "optivem-testing-${projectVersion}.jar",
+            "optivem-testing-${projectVersion}-sources.jar", 
+            "optivem-testing-${projectVersion}-javadoc.jar"
+        ]
+        
+        filesToCopy.each { filename ->
+            // Copy main file
+            copy {
+                from "${artifactPath}/${filename}"
+                into mavenDir
+            }
+            
+            // Copy signature file if it exists
+            def signatureFile = "${artifactPath}/${filename}.asc"
+            if (file(signatureFile).exists()) {
+                copy {
+                    from signatureFile
+                    into mavenDir
+                }
+            }
+            
+            // Generate proper checksums
+            def sourceFile = file("${artifactPath}/${filename}")
+            if (sourceFile.exists()) {
+                // Generate MD5 (just the hash value)
+                def md5Hash = ant.checksum(file: sourceFile, algorithm: "md5", property: "${filename}.md5")
+                def md5Value = ant.antProject.properties["${filename}.md5"]
+                file("${mavenDir}/${filename}.md5").text = md5Value
+                
+                // Generate SHA1 (just the hash value)
+                def sha1Hash = ant.checksum(file: sourceFile, algorithm: "sha1", property: "${filename}.sha1")
+                def sha1Value = ant.antProject.properties["${filename}.sha1"]
+                file("${mavenDir}/${filename}.sha1").text = sha1Value
+            }
+        }
+        
+        // Create the zip bundle
+        ant.zip(destfile: bundleZip) {
+            fileset(dir: bundleDir)
+        }
+        
+        // List what's in the bundle
+        println ""
+        println "✅ Bundle created successfully: ${bundleZip}"
+        println ""
+        println "Bundle contents:"
+        fileTree(bundleDir).each { file ->
+            println "  ${file.path.substring(bundleDir.length() + 1)}"
+        }
+        
+        println ""
+        println "To upload to Central Portal, run this command:"
+        println ""
+        println "curl -X POST \\"
+        println "  https://central.sonatype.com/api/v1/publisher/upload \\"
+        println "  -u '${username}:${password}' \\"
+        println "  -F 'bundle=@${bundleZip}' \\"
+        println "  -F 'publishingType=USER_MANAGED'"
+        println ""
+        println "Or run: gradlew :core:uploadToCentralPortal"
+    }
+}
+
+task uploadToCentralPortal(type: Exec) {
+    dependsOn 'createCentralPortalBundle'
+    description 'Upload bundle to Sonatype Central Portal'
+    
+    doFirst {
+        def username = System.getenv("SONATYPE_USERNAME")
+        def password = System.getenv("SONATYPE_PASSWORD")
+        def projectVersion = project.version
+        def buildPath = layout.buildDirectory.get().asFile.absolutePath
+        def bundleZip = "${buildPath}/optivem-testing-${projectVersion}.zip"
+        
+        if (!username || !password) {
+            throw new GradleException("SONATYPE_USERNAME and SONATYPE_PASSWORD environment variables must be set")
+        }
+        
+        println "Uploading to Central Portal..."
+        println "Bundle: ${bundleZip}"
+        
+        commandLine 'curl', '-X', 'POST',
+            'https://central.sonatype.com/api/v1/publisher/upload',
+            '-u', "${username}:${password}",
+            '-F', "bundle=@${bundleZip}",
+            '-F', 'publishingType=USER_MANAGED'
+    }
+    
+    doLast {
+        println "✅ Upload completed!"
+        println "Check your deployment status at: https://central.sonatype.com/publishing/deployments"
+    }
+}

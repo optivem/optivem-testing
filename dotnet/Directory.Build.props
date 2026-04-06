@@ -1,0 +1,12 @@
+<Project>
+  <PropertyGroup>
+    <VersionPrefix>1.0.7</VersionPrefix>
+    <Authors>Optivem</Authors>
+    <Company>Optivem</Company>
+    <Copyright>Copyright © 2026 Optivem</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/optivem/optivem-testing</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/optivem/optivem-testing</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+</Project>

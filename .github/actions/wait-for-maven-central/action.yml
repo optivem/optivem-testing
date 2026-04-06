@@ -1,0 +1,34 @@
+name: 'Wait for Maven Central Availability'
+description: 'Polls Maven Central to verify artifact availability before running tests'
+inputs:
+  release-version:
+    description: 'The release version to check on Maven Central'
+    required: true
+  group-id:
+    description: 'Maven group ID (default: com.optivem)'
+    required: false
+    default: 'com.optivem'
+  artifact-id:
+    description: 'Maven artifact ID (default: optivem-testing)'
+    required: false
+    default: 'optivem-testing'
+  max-attempts:
+    description: 'Maximum number of polling attempts (default: 60)'
+    required: false
+    default: '60'
+  poll-interval:
+    description: 'Seconds between polling attempts (default: 60)'
+    required: false
+    default: '60'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Wait for Maven Central availability
+      uses: optivem/poll-until-action@v1
+      with:
+        check-script: .github/actions/wait-for-maven-central/check-maven-central-availability.ps1
+        script-args: '${{ inputs.release-version }} ${{ inputs.group-id }} ${{ inputs.artifact-id }}'
+        max-retries: ${{ inputs.max-attempts }}
+        interval-seconds: ${{ inputs.poll-interval }}
+        condition-name: 'Maven Central availability'

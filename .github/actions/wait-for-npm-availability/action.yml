@@ -1,0 +1,30 @@
+name: 'Wait for npm Availability'
+description: 'Polls npm registry to verify package availability before running tests'
+inputs:
+  release-version:
+    description: 'The release version to check on npm'
+    required: true
+  package-name:
+    description: 'npm package name (default: @optivem/optivem-testing)'
+    required: false
+    default: '@optivem/optivem-testing'
+  max-attempts:
+    description: 'Maximum number of polling attempts (default: 60)'
+    required: false
+    default: '60'
+  poll-interval:
+    description: 'Seconds between polling attempts (default: 15)'
+    required: false
+    default: '15'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Wait for npm availability
+      uses: optivem/poll-until-action@v1
+      with:
+        check-script: .github/actions/wait-for-npm-availability/check-npm-availability.ps1
+        script-args: '${{ inputs.release-version }} ${{ inputs.package-name }}'
+        max-retries: ${{ inputs.max-attempts }}
+        interval-seconds: ${{ inputs.poll-interval }}
+        condition-name: 'npm availability'

@@ -1,0 +1,22 @@
+name: 'Prepare NuGet Release Artifacts'
+description: 'Prepares NuGet release artifacts by repacking RC package with release version'
+
+inputs:
+  rc-version:
+    description: 'RC version to rename from'
+    required: true
+  release-version:
+    description: 'Release version to rename to'
+    required: true
+  package-name:
+    description: 'NuGet package name'
+    required: false
+    default: 'Optivem.Testing'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Prepare NuGet release artifacts
+      shell: pwsh
+      run: |
+        ${{ github.action_path }}/prepare-nuget-release-artifacts.ps1 -RcVersion "${{ inputs.rc-version }}" -ReleaseVersion "${{ inputs.release-version }}" -PackageName "${{ inputs.package-name }}"

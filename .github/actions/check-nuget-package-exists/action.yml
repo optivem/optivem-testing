@@ -1,0 +1,19 @@
+name: 'Check NuGet Package Exists'
+description: 'Checks if a version already exists on NuGet.org'
+
+inputs:
+  release-version:
+    description: 'Release version to check'
+    required: true
+  package-name:
+    description: 'NuGet package name'
+    required: false
+    default: 'Optivem.Testing'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check if version exists on NuGet.org
+      shell: pwsh
+      run: |
+        ${{ github.action_path }}/check-nuget-package-exists.ps1 -ReleaseVersion "${{ inputs.release-version }}" -PackageName "${{ inputs.package-name }}"

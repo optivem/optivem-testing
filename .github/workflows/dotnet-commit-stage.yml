@@ -1,0 +1,76 @@
+name: .NET Commit Stage
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: ['dotnet/**']
+  pull_request:
+    branches: [ "main" ]
+    paths: ['dotnet/**']
+  workflow_dispatch: # Allow manual triggering
+
+concurrency:
+  group: dotnet-commit-stage
+  cancel-in-progress: true
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dotnet
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      prerelease-version: ${{ steps.version.outputs.prerelease-version }}
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: 8.0.x
+    
+    - name: Extract base version from Directory.Build.props
+      id: base-version
+      uses: ./.github/actions/extract-dotnet-version
+    
+    - name: Generate RC version
+      id: version
+      uses: optivem/generate-prerelease-version-action@v2
+      with:
+        base-version: ${{ steps.base-version.outputs.version }}
+        prerelease-number: ${{ github.run_number }}
+    
+    - name: Restore dependencies
+      run: dotnet restore
+    
+    - name: Build
+      run: dotnet build --no-restore --configuration Release /p:Version="${{ steps.version.outputs.prerelease-version }}"
+    
+    - name: Test
+      run: dotnet test --no-build --configuration Release --verbosity normal
+    
+    - name: Pack NuGet package
+      run: dotnet pack Optivem.Testing/Optivem.Testing.csproj --no-build --configuration Release /p:PackageVersion="${{ steps.version.outputs.prerelease-version }}" --output ./nupkg
+    
+    - name: Publish RC to GitHub Packages
+      run: dotnet nuget push ./nupkg/*.nupkg --api-key ${{ secrets.GITHUB_TOKEN }} --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" --skip-duplicate
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Create commit stage summary
+      run: |
+        echo "## ✅ Commit Stage Completed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Prerelease Version Published:** \`${{ steps.version.outputs.prerelease-version }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🚀 **Actions Completed:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Built and tested Optivem.Testing" >> $GITHUB_STEP_SUMMARY
+        echo "- Published RC to GitHub Packages" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ✅ RC ready for acceptance testing" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Next Step:** RC will be automatically tested in acceptance stage" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,26 @@
+name: 'Download npm RC Artifacts'
+description: 'Downloads npm RC artifacts from GitHub Packages'
+
+inputs:
+  rc-version:
+    description: 'RC version to download'
+    required: true
+  github-token:
+    description: 'GitHub token for authentication'
+    required: true
+  package-name:
+    description: 'npm package name (without scope)'
+    required: false
+    default: 'optivem-testing'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download npm RC artifacts
+      shell: pwsh
+      env:
+        GITHUB_TOKEN: ${{ inputs.github-token }}
+      run: |
+        ${{ github.action_path }}/download-npm-rc-artifacts.ps1 `
+          -RcVersion "${{ inputs.rc-version }}" `
+          -PackageName "${{ inputs.package-name }}"

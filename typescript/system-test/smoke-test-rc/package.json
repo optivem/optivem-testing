@@ -1,0 +1,13 @@
+{
+  "name": "smoke-test-rc",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Smoke tests for RC package from GitHub Packages",
+  "scripts": {
+    "test": "node smoke-test.js"
+  },
+  "dependencies": {
+    "@optivem/optivem-testing": "rc"
+  }
+}

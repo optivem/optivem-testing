@@ -1,0 +1,25 @@
+name: 'Publish to NuGet.org'
+description: 'Publishes a NuGet package to NuGet.org'
+
+inputs:
+  package-path:
+    description: 'Path to the .nupkg file to publish'
+    required: true
+  nuget-api-key:
+    description: 'NuGet.org API key for authentication'
+    required: true
+  source:
+    description: 'NuGet source URL'
+    required: false
+    default: 'https://api.nuget.org/v3/index.json'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Publish to NuGet.org
+      shell: pwsh
+      run: |
+        ${{ github.action_path }}/publish-nuget.ps1 `
+          -PackagePath "${{ inputs.package-path }}" `
+          -NuGetApiKey "${{ inputs.nuget-api-key }}" `
+          -Source "${{ inputs.source }}"

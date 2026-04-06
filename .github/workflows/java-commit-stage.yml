@@ -1,0 +1,112 @@
+name: Java Commit Stage
+
+on:
+  push:
+    branches: [ "main" ]
+    paths: ['java/**']
+  pull_request:
+    branches: [ "main" ]
+    paths: ['java/**']
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: java
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      rc-version: ${{ steps.version.outputs.version }}
+
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: wrapper
+
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+
+    - name: Extract base version
+      id: extract_version
+      uses: ./.github/actions/extract-gradle-version
+    
+    - name: Check if Git tag exists
+      uses: optivem/check-tag-exists-action@v1
+      with:
+        tag-name: v${{ steps.extract_version.outputs.base_version }}
+    - name: Check if GitHub Release exists
+      id: check-release
+      uses: optivem/check-release-exists-action@v2
+      with:
+        version: v${{ steps.extract_version.outputs.base_version }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+    - name: Fail if release already exists
+      if: steps.check-release.outputs.exists == 'true'
+      run: |
+        echo "::error::Release v${{ steps.extract_version.outputs.base_version }} already exists. Cannot use this version."
+        exit 1
+    - name: Check if Maven package version exists
+      uses: ./.github/actions/check-maven-package-exists
+      with:
+        release-version: ${{ steps.extract_version.outputs.base_version }}
+        github-token: ${{ secrets.GITHUB_TOKEN }}
+        repository: ${{ github.repository }}
+    
+    - name: Determine RC version
+      id: version
+      run: echo "version=${{ steps.extract_version.outputs.base_version }}-rc.${{ github.run_number }}" >> $GITHUB_OUTPUT
+
+    - name: Build core module
+      run: ./gradlew core:build --no-daemon -Pversion="${{ steps.version.outputs.version }}"
+
+    - name: Publish RC to GitHub Packages
+      run: ./gradlew core:publish --no-daemon -Pversion="${{ steps.version.outputs.version }}"
+      env:
+        GITHUB_USERNAME: ${{ github.actor }}
+        GITHUB_WRITE_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create commit stage summary
+      run: |
+        echo "## ✅ Commit Stage Completed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**RC Version Published:** \`${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🚀 **Actions Completed:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Built and tested core module" >> $GITHUB_STEP_SUMMARY
+        echo "- Published RC to GitHub Packages" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ✅ RC ready for acceptance testing" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Next Step:** RC will be automatically tested in acceptance stage" >> $GITHUB_STEP_SUMMARY
+
+
+  dependency-submission:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: java
+    permissions:
+      contents: write
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Generate and submit dependency graph
+      uses: gradle/actions/dependency-submission@v4

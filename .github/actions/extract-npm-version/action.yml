@@ -1,0 +1,15 @@
+name: 'Extract npm Version'
+description: 'Extracts version from package.json'
+
+outputs:
+  version:
+    description: 'The base version extracted from package.json'
+    value: ${{ steps.extract.outputs.version }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Extract version from package.json
+      id: extract
+      shell: pwsh
+      run: ${{ github.action_path }}/extract-npm-version.ps1

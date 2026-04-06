@@ -1,0 +1,25 @@
+name: 'Download Maven RC Artifacts'
+description: 'Downloads RC artifacts from GitHub Packages (Maven)'
+
+inputs:
+  rc-version:
+    description: 'RC version to download'
+    required: true
+  github-username:
+    description: 'GitHub username for authentication'
+    required: true
+  github-token:
+    description: 'GitHub token for authentication'
+    required: true
+  repository:
+    description: 'GitHub repository (owner/repo)'
+    required: false
+    default: ${{ github.repository }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Download Maven RC artifacts
+      shell: pwsh
+      run: |
+        ${{ github.action_path }}/download-maven-rc-artifacts.ps1 -RcVersion "${{ inputs.rc-version }}" -GitHubUsername "${{ inputs.github-username }}" -GitHubToken "${{ inputs.github-token }}" -Repository "${{ inputs.repository }}"

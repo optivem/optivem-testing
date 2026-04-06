@@ -1,0 +1,22 @@
+name: 'Publish Central Deployment'
+description: 'Publishes a deployment on Maven Central Portal via REST API'
+
+inputs:
+  deployment-id:
+    description: 'Maven Central deployment ID'
+    required: true
+  release-version:
+    description: 'Release version to publish'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Publish deployment on Maven Central
+      shell: pwsh
+      run: |
+        ${{ github.action_path }}/publish-central-deployment.ps1 `
+          -DeploymentId "${{ inputs.deployment-id }}" `
+          -ReleaseVersion "${{ inputs.release-version }}" `
+          -SonatypeUsername "$env:SONATYPE_USERNAME" `
+          -SonatypePassword "$env:SONATYPE_PASSWORD"

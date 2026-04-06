@@ -1,0 +1,25 @@
+name: 'Prepare npm Release Artifacts'
+description: 'Prepares npm release artifacts by repacking RC package with release version'
+
+inputs:
+  rc-version:
+    description: 'RC version to rename from'
+    required: true
+  release-version:
+    description: 'Release version to rename to'
+    required: true
+  package-name:
+    description: 'npm package name (without scope)'
+    required: false
+    default: 'optivem-testing'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Prepare npm release artifacts
+      shell: pwsh
+      run: |
+        ${{ github.action_path }}/prepare-npm-release-artifacts.ps1 `
+          -RcVersion "${{ inputs.rc-version }}" `
+          -ReleaseVersion "${{ inputs.release-version }}" `
+          -PackageName "${{ inputs.package-name }}"

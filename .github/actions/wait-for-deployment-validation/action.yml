@@ -1,0 +1,30 @@
+name: 'Wait for Deployment Validation'
+description: 'Polls Maven Central deployment status until validated or failed'
+
+inputs:
+  deployment-id:
+    description: 'Maven Central deployment ID'
+    required: true
+  expected-state:
+    description: 'Expected deployment state to wait for (VALIDATED, PUBLISHING, PUBLISHED)'
+    required: true
+  max-attempts:
+    description: 'Maximum number of polling attempts'
+    required: false
+    default: '60'
+  poll-interval:
+    description: 'Seconds between polling attempts'
+    required: false
+    default: '60'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Wait for deployment state
+      uses: optivem/poll-until-action@v1
+      with:
+        check-script: .github/actions/wait-for-deployment-validation/check-deployment-state.ps1
+        script-args: '${{ inputs.deployment-id }} ${{ inputs.expected-state }}'
+        max-retries: ${{ inputs.max-attempts }}
+        interval-seconds: ${{ inputs.poll-interval }}
+        condition-name: 'Deployment State ${{ inputs.expected-state }}'

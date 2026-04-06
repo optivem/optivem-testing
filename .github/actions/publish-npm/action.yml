@@ -1,0 +1,21 @@
+name: 'Publish to npm'
+description: 'Publishes an npm package to npm.org'
+
+inputs:
+  package-path:
+    description: 'Path to the .tgz file to publish'
+    required: true
+  npm-token:
+    description: 'npm.org token for authentication'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Publish to npm.org
+      shell: pwsh
+      env:
+        NPM_TOKEN: ${{ inputs.npm-token }}
+      run: |
+        ${{ github.action_path }}/publish-npm.ps1 `
+          -PackagePath "${{ inputs.package-path }}"

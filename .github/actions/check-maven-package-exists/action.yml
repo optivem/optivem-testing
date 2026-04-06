@@ -1,0 +1,23 @@
+name: 'Check Maven Package Exists'
+description: 'Checks if a version already exists for the Maven package in GitHub Packages'
+
+inputs:
+  release-version:
+    description: 'Release version to check'
+    required: true
+  github-token:
+    description: 'GitHub token for API access'
+    required: false
+    default: ${{ github.token }}
+  repository:
+    description: 'GitHub repository (owner/repo)'
+    required: false
+    default: ${{ github.repository }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Check if Maven package version exists
+      shell: pwsh
+      run: |
+        ${{ github.action_path }}/check-maven-package-exists.ps1 -ReleaseVersion "${{ inputs.release-version }}" -GitHubToken "${{ inputs.github-token }}" -Repository "${{ inputs.repository }}"

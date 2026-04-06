@@ -1,0 +1,10 @@
+repositories {
+    mavenCentral()
+}
+
+// Use version parameter if provided, otherwise use base version for release testing
+def testVersion = project.hasProperty('version') ? project.version : rootProject.ext.baseVersion
+
+dependencies {
+    testImplementation "com.optivem:optivem-testing:${testVersion}"
+}

@@ -1,0 +1,60 @@
+plugins {
+    id 'java'
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+// Common configuration for all submodules
+subprojects {
+    apply plugin: 'java'
+    
+    java {
+        toolchain {
+            languageVersion = JavaLanguageVersion.of(21)
+        }
+    }
+    
+    repositories {
+        mavenCentral()
+    }
+    
+    dependencies {
+        testImplementation 'org.junit.jupiter:junit-jupiter:5.9.2'
+        testRuntimeOnly 'org.junit.platform:junit-platform-launcher:1.9.2'
+    }
+    
+    test {
+        useJUnitPlatform()
+        
+        // Print more detailed test output
+        testLogging {
+            events "passed", "skipped", "failed"
+            exceptionFormat "full"
+        }
+    }
+    
+    // Task to verify the package can be resolved
+    task verifyDependencies {
+        inputs.files(configurations.testRuntimeClasspath)
+        doLast {
+            println "Verifying that optivem-testing dependency can be resolved..."
+            def found = false
+            inputs.files.each { file ->
+                if (file.name.contains('optivem-testing')) {
+                    println "✓ Found optivem-testing dependency: ${file.name}"
+                    found = true
+                }
+            }
+            if (!found) {
+                throw new GradleException("optivem-testing dependency not found!")
+            }
+        }
+    }
+    
+    // Verify dependencies before running tests
+    test.dependsOn verifyDependencies
+}
