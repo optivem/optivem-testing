@@ -41,6 +41,8 @@ jobs:
     - name: Extract base version
       id: extract_version
       uses: ./.github/actions/extract-gradle-version
+      with:
+        working-directory: java
     
     - name: Check if Git tag exists
       uses: optivem/check-tag-exists-action@v1
@@ -110,3 +112,5 @@ jobs:
 
     - name: Generate and submit dependency graph
       uses: gradle/actions/dependency-submission@v4
+      with:
+        build-root-directory: java

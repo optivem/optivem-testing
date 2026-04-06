@@ -1,6 +1,12 @@
 name: 'Extract npm Version'
 description: 'Extracts version from package.json'
 
+inputs:
+  working-directory:
+    description: 'Working directory containing package.json'
+    required: false
+    default: '.'
+
 outputs:
   version:
     description: 'The base version extracted from package.json'
@@ -12,4 +18,5 @@ runs:
     - name: Extract version from package.json
       id: extract
       shell: pwsh
+      working-directory: ${{ inputs.working-directory }}
       run: ${{ github.action_path }}/extract-npm-version.ps1

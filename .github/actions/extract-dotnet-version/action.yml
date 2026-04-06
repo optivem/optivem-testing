@@ -1,5 +1,10 @@
 name: 'Extract .NET Version'
 description: 'Extract version from Directory.Build.props for .NET projects'
+inputs:
+  working-directory:
+    description: 'Working directory containing Directory.Build.props'
+    required: false
+    default: '.'
 outputs:
   version:
     description: 'The base version extracted from Directory.Build.props'
@@ -10,5 +15,6 @@ runs:
     - name: Extract base version from Directory.Build.props
       id: extract
       shell: pwsh
+      working-directory: ${{ inputs.working-directory }}
       run: |
         ${{ github.action_path }}/extract-dotnet-version.ps1
