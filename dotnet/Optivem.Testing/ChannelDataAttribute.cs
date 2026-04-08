@@ -46,9 +46,9 @@ public class ChannelDataAttribute : DataAttribute
     /// <summary>
     /// Additional channels that only the first data row should run on.
     /// All other rows run only on the base channels.
-    /// Example: [ChannelData(ChannelType.API, AlsoFirstRow = ChannelType.UI)]
+    /// Example: [ChannelData(ChannelType.API, AlsoForFirstRow = ChannelType.UI)]
     /// </summary>
-    public string[] AlsoFirstRow { get; set; } = Array.Empty<string>();
+    public string[] AlsoForFirstRow { get; set; } = Array.Empty<string>();
 
     public ChannelDataAttribute(params string[] channels)
     {
@@ -116,9 +116,9 @@ public class ChannelDataAttribute : DataAttribute
                         }
                     }
                 }
-                if (i == 0 && AlsoFirstRow.Length > 0)
+                if (i == 0 && AlsoForFirstRow.Length > 0)
                 {
-                    foreach (var also in AlsoFirstRow)
+                    foreach (var also in AlsoForFirstRow)
                     {
                         if (!effectiveChannels.Any(c => string.Equals(c, also, StringComparison.OrdinalIgnoreCase)))
                         {
@@ -213,9 +213,9 @@ public class ChannelDataAttribute : DataAttribute
     private List<string> GetEffectiveChannels(string[] baseChannels, int rowIndex)
     {
         var channels = baseChannels.ToList();
-        if (rowIndex == 0 && AlsoFirstRow.Length > 0)
+        if (rowIndex == 0 && AlsoForFirstRow.Length > 0)
         {
-            foreach (var also in AlsoFirstRow)
+            foreach (var also in AlsoForFirstRow)
             {
                 if (!channels.Any(c => string.Equals(c, also, StringComparison.OrdinalIgnoreCase)))
                 {

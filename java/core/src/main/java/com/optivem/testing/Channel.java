@@ -26,7 +26,7 @@ public @interface Channel {
      * Example:
      * <pre>
      * &#64;TestTemplate
-     * &#64;Channel(value = ChannelType.API, alsoFirstRow = ChannelType.UI)
+     * &#64;Channel(value = ChannelType.API, alsoForFirstRow = ChannelType.UI)
      * &#64;ValueSource(strings = {"3.5", "lala"})
      * void test(String value) {
      *     // "3.5" runs on API + UI, "lala" runs on API only
@@ -34,5 +34,5 @@ public @interface Channel {
      * </pre>
      * @return additional channel types for the first data row only
      */
-    String[] alsoFirstRow() default {};
+    String[] alsoForFirstRow() default {};
 }

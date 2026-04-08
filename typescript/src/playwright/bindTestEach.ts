@@ -8,7 +8,7 @@ import { getRegistrationChannel } from '../channel.js';
  * property (string or string[]), the row will also be registered for those channels
  * beyond the base channels from forChannels.
  *
- * Supports `alsoFirstRowChannels`: additional channels that only the first data row
+ * Supports `alsoForFirstRowChannels`: additional channels that only the first data row
  * should run on. All other rows run only on the base channels.
  *
  * Usage:
@@ -20,7 +20,7 @@ import { getRegistrationChannel } from '../channel.js';
  *     { unitPrice: '10.00', quantity: '3', basePrice: '30.00' },                   // API only
  * ])('should place order ...', async ({ scenario, unitPrice }) => { ... });
  *
- * // alsoFirstRow (first row gets extra channels automatically):
+ * // alsoForFirstRow (first row gets extra channels automatically):
  * const testEach = bindTestEach(test, ['API'], ['UI']);
  * testEach([
  *     { unitPrice: '20.00', quantity: '5', basePrice: '100.00' },   // API + UI (first row)
@@ -31,7 +31,7 @@ import { getRegistrationChannel } from '../channel.js';
 export function bindTestEach(
     testObj: any,
     baseChannels?: string[],
-    alsoFirstRowChannels?: string[],
+    alsoForFirstRowChannels?: string[],
 ) {
     return <TCase>(
         cases: ReadonlyArray<TCase>,
@@ -64,7 +64,7 @@ export function bindTestEach(
                     const isBaseChannel = baseChannels.includes(currentChannel);
                     const isAlsoChannel = alsoList.includes(currentChannel);
                     const isAlsoFirstRow = rowIndex === 0
-                        && alsoFirstRowChannels?.includes(currentChannel) === true;
+                        && alsoForFirstRowChannels?.includes(currentChannel) === true;
                     if (!isBaseChannel && !isAlsoChannel && !isAlsoFirstRow) {
                         return; // Skip this row for this channel
                     }

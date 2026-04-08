@@ -172,12 +172,12 @@ public class ChannelExtension implements TestTemplateInvocationContextProvider {
             }
         }
 
-        // Resolve alsoFirstRow channels
-        String[] alsoFirstRow = channelAnnotation.alsoFirstRow();
-        List<String> alsoFirstRowChannels = new ArrayList<>();
-        for (String also : alsoFirstRow) {
+        // Resolve alsoForFirstRow channels
+        String[] alsoForFirstRow = channelAnnotation.alsoForFirstRow();
+        List<String> alsoForFirstRowChannels = new ArrayList<>();
+        for (String also : alsoForFirstRow) {
             if (!containsIgnoreCase(channels, also)) {
-                alsoFirstRowChannels.add(also);
+                alsoForFirstRowChannels.add(also);
             }
         }
 
@@ -186,7 +186,7 @@ public class ChannelExtension implements TestTemplateInvocationContextProvider {
             return Arrays.stream(channels)
                     .map(channel -> new ChannelInvocationContext(channel, null, testMethod));
         } else {
-            // Combine channels with data rows, applying alsoFirstRow to the first row only
+            // Combine channels with data rows, applying alsoForFirstRow to the first row only
             List<TestTemplateInvocationContext> contexts = new ArrayList<>();
             for (int i = 0; i < dataRows.size(); i++) {
                 Object[] dataRow = dataRows.get(i);
@@ -194,7 +194,7 @@ public class ChannelExtension implements TestTemplateInvocationContextProvider {
                     contexts.add(new ChannelInvocationContext(channel, dataRow, testMethod));
                 }
                 if (i == 0) {
-                    for (String alsoChannel : alsoFirstRowChannels) {
+                    for (String alsoChannel : alsoForFirstRowChannels) {
                         contexts.add(new ChannelInvocationContext(alsoChannel, dataRow, testMethod));
                     }
                 }

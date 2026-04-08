@@ -108,6 +108,7 @@ jobs:
         uses: optivem/actions/trigger-and-wait@main
         with:
           workflow: acceptance-stage.yml
+          poll-interval: '300'
 
   trigger-release-stage:
     needs: [run-acceptance-stage, bump-version]
@@ -119,6 +120,7 @@ jobs:
         uses: optivem/actions/trigger-and-wait@main
         with:
           workflow: release-stage.yml
+          poll-interval: '300'
 
       - name: Display summary
         run: |
