@@ -145,6 +145,81 @@ public class ChannelDataAttributeTests
 
     #endregion
 
+    #region Pattern 2b: ChannelData + ChannelInlineData with Also (additional channels)
+
+    /// <summary>
+    /// Base channel is "API". First row also runs on "UI".
+    /// Expected: 3 test cases (API+"both", UI+"both", API+"baseOnly").
+    /// </summary>
+    [Theory]
+    [ChannelData("API")]
+    [ChannelInlineData("both", "message-both", Also = new[] { "UI" })]
+    [ChannelInlineData("baseOnly", "message-base")]
+    public void ChannelData_WithChannelInlineData_Also_ShouldAddChannels(
+        Channel channel,
+        string value,
+        string message)
+    {
+        if (channel.Type == "UI")
+        {
+            // UI should only see the row with Also
+            value.ShouldBe("both");
+            message.ShouldBe("message-both");
+        }
+        else
+        {
+            // API should see both rows
+            channel.Type.ShouldBe("API");
+            value.ShouldBeOneOf("both", "baseOnly");
+        }
+    }
+
+    /// <summary>
+    /// Simulates the real-world use case: API is base, first row also runs on UI.
+    /// Expected: 5 test cases (API×4 rows + UI×1 row with Also).
+    /// </summary>
+    [Theory]
+    [ChannelData("API")]
+    [ChannelInlineData("20.00", "5", "100.00", Also = new[] { "UI" })]
+    [ChannelInlineData("10.00", "3", "30.00")]
+    [ChannelInlineData("15.50", "4", "62.00")]
+    [ChannelInlineData("99.99", "1", "99.99")]
+    public void ChannelData_WithChannelInlineData_Also_MixedRows_ShouldReduceUiTests(
+        Channel channel,
+        string unitPrice,
+        string quantity,
+        string basePrice)
+    {
+        channel.Type.ShouldBeOneOf("API", "UI");
+        unitPrice.ShouldNotBeNullOrEmpty();
+        quantity.ShouldNotBeNullOrEmpty();
+        basePrice.ShouldNotBeNullOrEmpty();
+
+        if (channel.Type == "UI")
+        {
+            // UI should only see the row with Also
+            unitPrice.ShouldBe("20.00");
+        }
+    }
+
+    /// <summary>
+    /// Without Also — current cartesian product behavior should be unchanged.
+    /// Expected: 4 test cases (2 channels × 2 rows).
+    /// </summary>
+    [Theory]
+    [ChannelData("UI", "API")]
+    [ChannelInlineData("row1")]
+    [ChannelInlineData("row2")]
+    public void ChannelData_WithChannelInlineData_WithoutAlso_ShouldPreserveCartesian(
+        Channel channel,
+        string value)
+    {
+        channel.Type.ShouldBeOneOf("UI", "API");
+        value.ShouldBeOneOf("row1", "row2");
+    }
+
+    #endregion
+
     #region Pattern 3: ChannelData + ChannelClassData
 
     [Theory]

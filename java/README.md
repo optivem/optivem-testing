@@ -25,20 +25,52 @@ dependencies {
 </dependency>
 ```
 
-## Code Example
+## Usage
+
+### Basic Channel Testing
+
+Run the same test across multiple channels:
 
 ```java
-import com.optivem.testing.Channel;
-
-public class Example {
-    public static void main(String[] args) {
-        Channel channel = new Channel("test-channel");
-        
-        String name = channel.getName();
-        System.out.println("Channel name: " + name);  // Output: test-channel
-    }
+@TestTemplate
+@Channel({ChannelType.UI, ChannelType.API})
+void shouldCreateOrder() {
+    // Runs twice: once for UI, once for API
 }
 ```
+
+### Channel + DataSource (Cartesian Product)
+
+Combine channels with test data:
+
+```java
+@TestTemplate
+@Channel({ChannelType.UI, ChannelType.API})
+@DataSource({"20.00", "5", "100.00"})
+@DataSource({"10.00", "3", "30.00"})
+void shouldPlaceOrder(String unitPrice, String quantity, String basePrice) {
+    // Generates 4 tests: 2 channels × 2 data rows
+}
+```
+
+### Channel + DataSource with Additional Channels (`also`)
+
+Reduce UI test count by running only representative data rows on slow channels:
+
+```java
+@TestTemplate
+@Channel(ChannelType.API)
+@DataSource(value = {"20.00", "5", "100.00"}, also = ChannelType.UI)   // API + UI
+@DataSource({"10.00", "3", "30.00"})                                    // API only
+@DataSource({"15.50", "4", "62.00"})                                    // API only
+@DataSource({"99.99", "1", "99.99"})                                    // API only
+void shouldPlaceOrderWithCorrectBasePrice(String unitPrice, String quantity, String basePrice) {
+    // Generates 5 tests: API×4 rows + UI×1 row (the one with also)
+    // Without also: would be 8 tests (2 channels × 4 rows)
+}
+```
+
+The `also` attribute accepts one or more additional channel names. When specified, that data row runs on the base channels **plus** the additional channels. When omitted, the row runs on base channels only. This is fully backwards compatible.
 
 ## Requirements
 

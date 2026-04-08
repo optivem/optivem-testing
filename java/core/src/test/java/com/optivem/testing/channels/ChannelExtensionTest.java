@@ -316,6 +316,54 @@ public class ChannelExtensionTest {
     }
 
     // ==========================================================================
+    // @DataSource with 'also' (additional channels) Tests
+    // ==========================================================================
+
+    /**
+     * Base channel is CHANNEL_A. First row also runs on CHANNEL_B.
+     * Expected: 3 invocations (CHANNEL_A+"both", CHANNEL_B+"both", CHANNEL_A+"baseOnly").
+     */
+    @TestTemplate
+    @Channel(TestChannel.CHANNEL_A)
+    @DataSource(value = "both", also = TestChannel.CHANNEL_B)
+    @DataSource("baseOnly")
+    void shouldSupportDataSourceWithAlso(String value) {
+        assertNotNull(value, "Value should not be null");
+        assertTrue(value.equals("both") || value.equals("baseOnly"),
+                "Value should be 'both' or 'baseOnly'");
+    }
+
+    /**
+     * Simulates the real-world use case: API is base, first row also runs on UI (CHANNEL_B).
+     * Expected: 5 invocations (CHANNEL_A×4 rows + CHANNEL_B×1 row with also).
+     */
+    @TestTemplate
+    @Channel(TestChannel.CHANNEL_A)
+    @DataSource(value = {"20.00", "5", "100.00"}, also = TestChannel.CHANNEL_B)
+    @DataSource({"10.00", "3", "30.00"})
+    @DataSource({"15.50", "4", "62.00"})
+    @DataSource({"99.99", "1", "99.99"})
+    void shouldSupportDataSourceWithAlsoMixedRows(String unitPrice, String quantity, String basePrice) {
+        assertNotNull(unitPrice, "Unit price should not be null");
+        assertNotNull(quantity, "Quantity should not be null");
+        assertNotNull(basePrice, "Base price should not be null");
+    }
+
+    /**
+     * Without 'also' — current cartesian product behavior should be unchanged.
+     * Expected: 4 invocations (2 channels × 2 rows).
+     */
+    @TestTemplate
+    @Channel({TestChannel.CHANNEL_A, TestChannel.CHANNEL_B})
+    @DataSource("row1")
+    @DataSource("row2")
+    void shouldPreserveCartesianProductWithoutAlso(String value) {
+        assertNotNull(value, "Value should not be null");
+        assertTrue(value.equals("row1") || value.equals("row2"),
+                "Value should be 'row1' or 'row2'");
+    }
+
+    // ==========================================================================
     // No Data Source Tests (just channels)
     // ==========================================================================
 
@@ -333,4 +381,3 @@ public class ChannelExtensionTest {
         assertTrue(true, "Test should run for single channel");
     }
 }
-

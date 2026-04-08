@@ -1,19 +1,30 @@
+import { getRegistrationChannel } from '../channel.js';
+
 /**
  * Binds a `test.each`-style helper to a specific Playwright test object.
  * Merges Playwright fixture values with each test-case row so tests can destructure both.
+ *
+ * Supports optional per-row additional channels: if a test case object has an `also`
+ * property (string or string[]), the row will also be registered for those channels
+ * beyond the base channels from forChannels.
  *
  * Usage:
  * ```typescript
  * const testEach = bindTestEach(test);
  *
- * testEach([{ quantity: 1 }, { quantity: 5 }])(
- *     'should handle quantity=$quantity',
- *     async ({ scenario, quantity }) => { ... }
+ * testEach([
+ *     { unitPrice: '20.00', quantity: '5', basePrice: '100.00', also: ['UI'] },   // API + UI
+ *     { unitPrice: '10.00', quantity: '3', basePrice: '30.00' },                   // API only
+ *     { unitPrice: '15.50', quantity: '4', basePrice: '62.00' },                   // API only
+ * ])(
+ *     'should place order with $unitPrice x $quantity = $basePrice',
+ *     async ({ scenario, unitPrice, quantity, basePrice }) => { ... }
  * );
  * ```
  */
 export function bindTestEach(
     testObj: any,
+    baseChannels?: string[],
 ) {
     return <TCase>(
         cases: ReadonlyArray<TCase>,
@@ -36,8 +47,26 @@ export function bindTestEach(
                     );
                 }
 
+                // Per-row 'also' channels: if the current registration channel is not
+                // a base channel and not in the row's 'also' list, skip this row.
+                const currentChannel = getRegistrationChannel();
+                if (currentChannel != null && baseChannels != null) {
+                    const rowAlso = row['also'];
+                    const alsoList = typeof rowAlso === 'string' ? [rowAlso]
+                        : Array.isArray(rowAlso) ? rowAlso as string[]
+                        : [];
+                    const isBaseChannel = baseChannels.includes(currentChannel);
+                    const isAlsoChannel = alsoList.includes(currentChannel);
+                    if (!isBaseChannel && !isAlsoChannel) {
+                        return; // Skip this row for this channel
+                    }
+                }
+
+                // Exclude 'also' from the row data passed to the test
+                const { also: _also, ...dataRow } = row;
+
                 const testName = name.replace(/\$(\w+)/g, (_: string, key: string) => {
-                    const value = row[key];
+                    const value = dataRow[key];
                     if (typeof value === 'string') return value;
                     if (typeof value === 'number') return value.toString();
                     return '';
@@ -45,7 +74,7 @@ export function bindTestEach(
                 // Inject each row property as a Playwright fixture so we
                 // never need rest-property syntax in the test callback.
                 const rowFixtures: Record<string, any> = {};
-                for (const [key, value] of Object.entries(row)) {
+                for (const [key, value] of Object.entries(dataRow)) {
                     rowFixtures[key] = async ({}: any, use: any) => {
                         await use(value);
                     };

@@ -94,10 +94,23 @@ public class ChannelDataAttribute : DataAttribute
         // If ChannelInlineData is present
         else if (inlineDataAttributes.Length > 0)
         {
-            // Create Cartesian product: channels × inline data (combinatorial mode)
-            foreach (var channel in channelsToUse)
+            // Each inline data row may specify additional channels via 'Also'
+            foreach (var inlineDataAttr in inlineDataAttributes)
             {
-                foreach (var inlineDataAttr in inlineDataAttributes)
+                // Effective channels = base channels + Also channels
+                var effectiveChannels = channelsToUse.ToList();
+                if (inlineDataAttr.Also != null && inlineDataAttr.Also.Length > 0)
+                {
+                    foreach (var also in inlineDataAttr.Also)
+                    {
+                        if (!effectiveChannels.Any(c => string.Equals(c, also, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            effectiveChannels.Add(also);
+                        }
+                    }
+                }
+
+                foreach (var channel in effectiveChannels)
                 {
                     var testCase = new List<object> { new Channel(channel) };
                     testCase.AddRange(inlineDataAttr.Data);

@@ -118,6 +118,31 @@ public void CreateOrder_InvalidCountry_ShouldFail(
 }
 ```
 
+### Channel + Inline Data with Additional Channels (`Also`)
+
+Reduce UI test count by running only representative data rows on slow channels:
+
+```csharp
+[Theory]
+[ChannelData("API")]
+[ChannelInlineData("20.00", "5", "100.00", Also = new[] { "UI" })]   // API + UI
+[ChannelInlineData("10.00", "3", "30.00")]                            // API only
+[ChannelInlineData("15.50", "4", "62.00")]                            // API only
+[ChannelInlineData("99.99", "1", "99.99")]                            // API only
+public void PlaceOrder_ShouldCalculateCorrectBasePrice(
+    Channel channel,
+    string unitPrice,
+    string quantity,
+    string basePrice)
+{
+    // Test implementation
+}
+// Generates 5 tests: API×4 rows + UI×1 row (the one with Also)
+// Without Also: would be 8 tests (2 channels × 4 rows)
+```
+
+The `Also` property accepts an array of additional channel names. When specified, that data row runs on the base channels **plus** the additional channels. When omitted, the row runs on base channels only. This is fully backwards compatible.
+
 ## Test Isolation
 
 Mark tests that require isolation from other tests:

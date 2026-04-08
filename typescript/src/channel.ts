@@ -48,6 +48,21 @@ export function defineChannel<TFixtures>(
     };
 }
 
+/**
+ * Module-level variable holding the channel currently being registered.
+ * Set during describe-block registration in forChannels, so that helpers
+ * like bindTestEach can filter test cases per channel at registration time.
+ */
+let _registrationChannel: string | null = null;
+
+/**
+ * Returns the channel type currently being registered inside a forChannels block,
+ * or null if called outside of registration.
+ */
+export function getRegistrationChannel(): string | null {
+    return _registrationChannel;
+}
+
 export function forChannels(
     channelApi: ChannelDescribeApi,
     ...channelTypes: string[]
@@ -67,7 +82,9 @@ export function forChannels(
                 channelApi.afterEach(() => {
                     ChannelContext.clear();
                 });
+                _registrationChannel = channel;
                 block();
+                _registrationChannel = null;
             });
         }
     };

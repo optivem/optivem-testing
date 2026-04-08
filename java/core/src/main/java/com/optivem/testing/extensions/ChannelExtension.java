@@ -140,14 +140,35 @@ public class ChannelExtension implements TestTemplateInvocationContextProvider {
             DataSource singleAnnotation =
                     testMethod.getAnnotation(DataSource.class);
 
+            List<DataSource> dataSourceAnnotations = new ArrayList<>();
             if (containerAnnotation != null) {
-                // Multiple @DataSource annotations
-                for (DataSource annotation : containerAnnotation.value()) {
-                    dataRows.addAll(extractArgumentsFromAnnotation(annotation, context));
-                }
+                dataSourceAnnotations.addAll(Arrays.asList(containerAnnotation.value()));
             } else if (singleAnnotation != null) {
-                // Single @DataSource annotation
-                dataRows.addAll(extractArgumentsFromAnnotation(singleAnnotation, context));
+                dataSourceAnnotations.add(singleAnnotation);
+            }
+
+            if (!dataSourceAnnotations.isEmpty()) {
+                // DataSource annotations support per-row additional channels via 'also'
+                List<TestTemplateInvocationContext> contexts = new ArrayList<>();
+                for (DataSource annotation : dataSourceAnnotations) {
+                    List<Object[]> rows = extractArgumentsFromAnnotation(annotation, context);
+                    String[] alsoChannels = annotation.also();
+
+                    // Effective channels = base channels + also channels
+                    List<String> effectiveChannels = new ArrayList<>(Arrays.asList(channels));
+                    for (String also : alsoChannels) {
+                        if (!containsIgnoreCase(channels, also)) {
+                            effectiveChannels.add(also);
+                        }
+                    }
+
+                    for (String channel : effectiveChannels) {
+                        for (Object[] row : rows) {
+                            contexts.add(new ChannelInvocationContext(channel, row, testMethod));
+                        }
+                    }
+                }
+                return contexts.stream();
             }
         }
 
@@ -156,7 +177,7 @@ public class ChannelExtension implements TestTemplateInvocationContextProvider {
             return Arrays.stream(channels)
                     .map(channel -> new ChannelInvocationContext(channel, null, testMethod));
         } else {
-            // Combine channels with data rows
+            // Combine channels with data rows (other data source types — no per-row 'also')
             List<TestTemplateInvocationContext> contexts = new ArrayList<>();
             for (String channel : channels) {
                 for (Object[] dataRow : dataRows) {
@@ -165,6 +186,18 @@ public class ChannelExtension implements TestTemplateInvocationContextProvider {
             }
             return contexts.stream();
         }
+    }
+
+    /**
+     * Checks if a string array contains a value (case-insensitive).
+     */
+    private boolean containsIgnoreCase(String[] array, String value) {
+        for (String element : array) {
+            if (element.equalsIgnoreCase(value)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
@@ -557,4 +590,3 @@ public class ChannelExtension implements TestTemplateInvocationContextProvider {
         }
     }
 }
-

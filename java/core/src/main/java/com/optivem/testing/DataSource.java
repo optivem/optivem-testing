@@ -40,6 +40,26 @@ public @interface DataSource {
     String[] value();
 
     /**
+     * Additional channels this data row should also run on, beyond the base channels
+     * declared in the method-level @Channel annotation.
+     * When empty (default), the row runs only on the base channels.
+     * <p>
+     * Example:
+     * <pre>
+     * &#64;TestTemplate
+     * &#64;Channel(ChannelType.API)
+     * &#64;DataSource(value = {"20.00", "5", "100.00"}, also = ChannelType.UI)   // API + UI
+     * &#64;DataSource({"10.00", "3", "30.00"})                                    // API only
+     * &#64;DataSource({"15.50", "4", "62.00"})                                    // API only
+     * void shouldPlaceOrderWithCorrectBasePrice(String unitPrice, String quantity, String basePrice) {
+     *     // First row runs on API and UI, remaining rows run on API only
+     * }
+     * </pre>
+     * @return additional channel types this row should also run on, or empty for base channels only
+     */
+    String[] also() default {};
+
+    /**
      * Container annotation for repeated @DataSource annotations.
      */
     @Target({ElementType.METHOD})
@@ -52,4 +72,3 @@ public @interface DataSource {
         DataSource[] value();
     }
 }
-
