@@ -436,6 +436,51 @@ public class ChannelExtensionTest {
     }
 
     /**
+     * alsoForFirstRow with @EnumSource: CHANNEL_A is base, CHANNEL_B only for first enum value.
+     * Expected: 4 invocations (CHANNEL_A×3 values + CHANNEL_B×1 first value).
+     */
+    @TestTemplate
+    @Channel(value = TestChannel.CHANNEL_A, alsoForFirstRow = TestChannel.CHANNEL_B)
+    @EnumSource(value = TestStatus.class, names = {"PENDING", "ACTIVE", "COMPLETED"})
+    void shouldSupportAlsoForFirstRowWithEnumSource(TestStatus status) {
+        assertNotNull(status, "Status should not be null");
+    }
+
+    /**
+     * alsoForFirstRow with @NullSource: CHANNEL_A is base, CHANNEL_B only for first (and only) row.
+     * Expected: 2 invocations (CHANNEL_A×1 + CHANNEL_B×1).
+     */
+    @TestTemplate
+    @Channel(value = TestChannel.CHANNEL_A, alsoForFirstRow = TestChannel.CHANNEL_B)
+    @NullSource
+    void shouldSupportAlsoForFirstRowWithNullSource(String value) {
+        assertNull(value, "Value should be null");
+    }
+
+    /**
+     * alsoForFirstRow with @EmptySource: CHANNEL_A is base, CHANNEL_B only for first (and only) row.
+     * Expected: 2 invocations (CHANNEL_A×1 + CHANNEL_B×1).
+     */
+    @TestTemplate
+    @Channel(value = TestChannel.CHANNEL_A, alsoForFirstRow = TestChannel.CHANNEL_B)
+    @EmptySource
+    void shouldSupportAlsoForFirstRowWithEmptySource(String value) {
+        assertNotNull(value, "Value should not be null");
+        assertTrue(value.isEmpty(), "Value should be empty");
+    }
+
+    /**
+     * alsoForFirstRow with @NullAndEmptySource: CHANNEL_A is base, CHANNEL_B only for first row (null).
+     * Expected: 3 invocations (CHANNEL_A×2 rows + CHANNEL_B×1 first row).
+     */
+    @TestTemplate
+    @Channel(value = TestChannel.CHANNEL_A, alsoForFirstRow = TestChannel.CHANNEL_B)
+    @NullAndEmptySource
+    void shouldSupportAlsoForFirstRowWithNullAndEmptySource(String value) {
+        assertTrue(value == null || value.isEmpty(), "Value should be null or empty");
+    }
+
+    /**
      * alsoForFirstRow should not affect tests without data sources.
      * Expected: 1 invocation (CHANNEL_A only, alsoForFirstRow has no effect without data).
      */

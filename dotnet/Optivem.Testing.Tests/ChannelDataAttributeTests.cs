@@ -220,6 +220,34 @@ public class ChannelDataAttributeTests
 
     #endregion
 
+    #region Pattern 2c: ChannelData with AlsoForFirstRow + ChannelInlineData
+
+    /// <summary>
+    /// AlsoForFirstRow with ChannelInlineData: API is base, UI only for first row.
+    /// Expected: 4 test cases (API×3 rows + UI×1 first row).
+    /// </summary>
+    [Theory]
+    [ChannelData("API", AlsoForFirstRow = new[] { "UI" })]
+    [ChannelInlineData("first", "message1")]
+    [ChannelInlineData("second", "message2")]
+    [ChannelInlineData("third", "message3")]
+    public void ChannelData_WithAlsoForFirstRow_ChannelInlineData_ShouldAddChannelOnlyForFirstRow(
+        Channel channel,
+        string value,
+        string message)
+    {
+        channel.Type.ShouldBeOneOf("API", "UI");
+        value.ShouldNotBeNullOrEmpty();
+
+        if (channel.Type == "UI")
+        {
+            value.ShouldBe("first");
+            message.ShouldBe("message1");
+        }
+    }
+
+    #endregion
+
     #region Pattern 3: ChannelData + ChannelClassData
 
     [Theory]
@@ -246,6 +274,28 @@ public class ChannelDataAttributeTests
         else if (value == "value2")
         {
             message.ShouldBe("message2");
+        }
+    }
+
+    /// <summary>
+    /// AlsoForFirstRow with ChannelClassData: API is base, UI only for first row.
+    /// Expected: 3 test cases (API×2 rows + UI×1 first row).
+    /// </summary>
+    [Theory]
+    [ChannelData("API", AlsoForFirstRow = new[] { "UI" })]
+    [ChannelClassData(typeof(TestDataProvider))]
+    public void ChannelData_WithAlsoForFirstRow_ChannelClassData_ShouldAddChannelOnlyForFirstRow(
+        Channel channel,
+        string value,
+        string message)
+    {
+        channel.Type.ShouldBeOneOf("API", "UI");
+        value.ShouldNotBeNullOrEmpty();
+
+        if (channel.Type == "UI")
+        {
+            value.ShouldBe("value1");
+            message.ShouldBe("message1");
         }
     }
 
@@ -277,6 +327,28 @@ public class ChannelDataAttributeTests
         else if (value == "memberValue2")
         {
             message.ShouldBe("memberMessage2");
+        }
+    }
+
+    /// <summary>
+    /// AlsoForFirstRow with ChannelMemberData (method): API is base, UI only for first row.
+    /// Expected: 3 test cases (API×2 rows + UI×1 first row).
+    /// </summary>
+    [Theory]
+    [ChannelData("API", AlsoForFirstRow = new[] { "UI" })]
+    [ChannelMemberData(nameof(GetMemberTestData))]
+    public void ChannelData_WithAlsoForFirstRow_ChannelMemberData_ShouldAddChannelOnlyForFirstRow(
+        Channel channel,
+        string value,
+        string message)
+    {
+        channel.Type.ShouldBeOneOf("API", "UI");
+        value.ShouldNotBeNullOrEmpty();
+
+        if (channel.Type == "UI")
+        {
+            value.ShouldBe("memberValue1");
+            message.ShouldBe("memberMessage1");
         }
     }
 
