@@ -15,6 +15,30 @@ This updates:
 - `java/build.gradle` (`baseVersion`)
 - `typescript/package.json` (`"version"`)
 
+## Release Checklist
+
+```bash
+# 1. Bump version, commit, and push (triggers commit stages automatically)
+echo "1.2.0" > VERSION
+bash scripts/bump-version.sh
+# commit & push
+
+# 2. Watch commit stages
+gh run watch $(gh run list -w "dotnet-commit-stage.yml" -L 1 --json databaseId -q '.[0].databaseId')
+gh run watch $(gh run list -w "java-commit-stage.yml" -L 1 --json databaseId -q '.[0].databaseId')
+gh run watch $(gh run list -w "typescript-commit-stage.yml" -L 1 --json databaseId -q '.[0].databaseId')
+
+# 3. Trigger acceptance and watch
+gh workflow run acceptance-stage.yml
+sleep 5
+gh run watch $(gh run list -w "acceptance-stage.yml" -L 1 --json databaseId -q '.[0].databaseId')
+
+# 4. Trigger release and watch
+gh workflow run release-stage.yml
+sleep 5
+gh run watch $(gh run list -w "release-stage.yml" -L 1 --json databaseId -q '.[0].databaseId')
+```
+
 ## CI/CD Pipeline
 
 The pipeline has three stages:
@@ -32,11 +56,12 @@ Each language has its own workflow:
 
 Runs hourly on a schedule. Smoke-tests the latest RC from GitHub Packages across all three languages in parallel.
 
-To trigger manually:
+To trigger and watch:
 
 ```bash
-# All languages in parallel
 gh workflow run acceptance-stage.yml
+sleep 5
+gh run watch $(gh run list -w "acceptance-stage.yml" -L 1 --json databaseId -q '.[0].databaseId')
 
 # Individual languages
 gh workflow run dotnet-acceptance-stage.yml
@@ -48,13 +73,17 @@ gh workflow run typescript-acceptance-stage.yml
 
 Promotes tested RC artifacts to public registries (NuGet, Maven Central, npm), then creates a git tag and GitHub Release.
 
-To trigger:
+By default, it picks the latest RC for each language. Each language has its own RC counter (e.g., .NET at `rc.6`, Java at `rc.12`, TypeScript at `rc.3`) since their commit stages run independently. The base version is always the same — the release stage strips the `-rc.N` suffix and publishes all three as the same version. You only need to specify RC versions explicitly if you want to release a specific earlier RC (e.g., if the latest one is broken).
+
+To trigger and watch:
 
 ```bash
-# All languages (uses latest RC for each)
+# All languages (uses latest RC for each — recommended)
 gh workflow run release-stage.yml
+sleep 5
+gh run watch $(gh run list -w "release-stage.yml" -L 1 --json databaseId -q '.[0].databaseId')
 
-# With specific RC versions
+# With specific RC versions (only if needed)
 gh workflow run release-stage.yml \
   -f dotnet_rc_version=1.1.1-rc.6 \
   -f java_rc_version=1.1.1-rc.12 \
