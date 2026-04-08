@@ -36,6 +36,31 @@ async function tryClose(obj: unknown): Promise<void> {
  * });
  * ```
  */
+/**
+ * Expands a base channel list with additional channels from a data item's `also` field.
+ * The `also` field can be a single channel string or an array of channel strings.
+ * Duplicates are ignored.
+ */
+export function resolveAlsoChannels(channelTypes: string[], data: unknown): string[] {
+    const dataAlso = (data as any)?.also;
+    let alsoList: string[];
+    if (typeof dataAlso === 'string') {
+        alsoList = [dataAlso];
+    } else if (Array.isArray(dataAlso)) {
+        alsoList = dataAlso as string[];
+    } else {
+        alsoList = [];
+    }
+    if (alsoList.length === 0) return channelTypes;
+    const effectiveChannels = [...channelTypes];
+    for (const also of alsoList) {
+        if (!effectiveChannels.includes(also)) {
+            effectiveChannels.push(also);
+        }
+    }
+    return effectiveChannels;
+}
+
 export function channelTest(
     channelTypes: string[],
     driverFactory: (channelType: string) => any,

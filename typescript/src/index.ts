@@ -1,4 +1,4 @@
-export { channelTest } from './channelTest.js';
+export { channelTest, resolveAlsoChannels } from './channelTest.js';
 export { ChannelListReporter } from './ChannelListReporter.js';
 export { ChannelContext } from './ChannelContext.js';
 export { registerChannel, defineChannel, forChannels, getRegistrationChannel } from './channel.js';
