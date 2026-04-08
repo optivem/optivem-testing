@@ -52,86 +52,53 @@ jobs:
           git push
           echo "commit-sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
-  wait-for-dotnet-commit-stage:
-    needs: bump-version
-    runs-on: ubuntu-latest
-    env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
-      COMMIT_SHA: ${{ needs.bump-version.outputs.commit-sha }}
-    steps:
-      - name: Wait for commit stages to start
-        run: sleep 30
-
-      - name: Wait for .NET Commit Stage
-        run: |
-          echo "Waiting for .NET Commit Stage (commit: $COMMIT_SHA)..."
-          while true; do
-            RUN_ID=$(gh run list -w "dotnet-commit-stage.yml" -L 5 --json databaseId,headSha \
-              -q "[.[] | select(.headSha == \"$COMMIT_SHA\")] | .[0].databaseId")
-            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
-              echo "Found run $RUN_ID, watching..."
-              gh run watch "$RUN_ID" --exit-status
-              break
-            fi
-            echo "Run not found yet, waiting..."
-            sleep 30
-          done
-
   wait-for-java-commit-stage:
     needs: bump-version
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
-      COMMIT_SHA: ${{ needs.bump-version.outputs.commit-sha }}
     steps:
       - name: Wait for commit stages to start
         run: sleep 30
 
       - name: Wait for Java Commit Stage
-        run: |
-          echo "Waiting for Java Commit Stage (commit: $COMMIT_SHA)..."
-          while true; do
-            RUN_ID=$(gh run list -w "java-commit-stage.yml" -L 5 --json databaseId,headSha \
-              -q "[.[] | select(.headSha == \"$COMMIT_SHA\")] | .[0].databaseId")
-            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
-              echo "Found run $RUN_ID, watching..."
-              gh run watch "$RUN_ID" --exit-status
-              break
-            fi
-            echo "Run not found yet, waiting..."
-            sleep 30
-          done
+        uses: optivem/actions/wait-for-commit-run@main
+        with:
+          workflow: java-commit-stage.yml
+          commit-sha: ${{ needs.bump-version.outputs.commit-sha }}
+
+  wait-for-dotnet-commit-stage:
+    needs: bump-version
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: Wait for commit stages to start
+        run: sleep 30
+
+      - name: Wait for .NET Commit Stage
+        uses: optivem/actions/wait-for-commit-run@main
+        with:
+          workflow: dotnet-commit-stage.yml
+          commit-sha: ${{ needs.bump-version.outputs.commit-sha }}
 
   wait-for-typescript-commit-stage:
     needs: bump-version
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
-      COMMIT_SHA: ${{ needs.bump-version.outputs.commit-sha }}
     steps:
       - name: Wait for commit stages to start
         run: sleep 30
 
       - name: Wait for TypeScript Commit Stage
-        run: |
-          echo "Waiting for TypeScript Commit Stage (commit: $COMMIT_SHA)..."
-          while true; do
-            RUN_ID=$(gh run list -w "typescript-commit-stage.yml" -L 5 --json databaseId,headSha \
-              -q "[.[] | select(.headSha == \"$COMMIT_SHA\")] | .[0].databaseId")
-            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
-              echo "Found run $RUN_ID, watching..."
-              gh run watch "$RUN_ID" --exit-status
-              break
-            fi
-            echo "Run not found yet, waiting..."
-            sleep 30
-          done
+        uses: optivem/actions/wait-for-commit-run@main
+        with:
+          workflow: typescript-commit-stage.yml
+          commit-sha: ${{ needs.bump-version.outputs.commit-sha }}
 
   run-acceptance-stage:
-    needs: [wait-for-dotnet-commit-stage, wait-for-java-commit-stage, wait-for-typescript-commit-stage]
+    needs: [wait-for-java-commit-stage, wait-for-dotnet-commit-stage, wait-for-typescript-commit-stage]
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
