@@ -172,16 +172,31 @@ public class ChannelExtension implements TestTemplateInvocationContextProvider {
             }
         }
 
+        // Resolve alsoFirstRow channels
+        String[] alsoFirstRow = channelAnnotation.alsoFirstRow();
+        List<String> alsoFirstRowChannels = new ArrayList<>();
+        for (String also : alsoFirstRow) {
+            if (!containsIgnoreCase(channels, also)) {
+                alsoFirstRowChannels.add(also);
+            }
+        }
+
         if (dataRows.isEmpty()) {
             // No data annotations, just run for each channel
             return Arrays.stream(channels)
                     .map(channel -> new ChannelInvocationContext(channel, null, testMethod));
         } else {
-            // Combine channels with data rows (other data source types — no per-row 'also')
+            // Combine channels with data rows, applying alsoFirstRow to the first row only
             List<TestTemplateInvocationContext> contexts = new ArrayList<>();
-            for (String channel : channels) {
-                for (Object[] dataRow : dataRows) {
+            for (int i = 0; i < dataRows.size(); i++) {
+                Object[] dataRow = dataRows.get(i);
+                for (String channel : channels) {
                     contexts.add(new ChannelInvocationContext(channel, dataRow, testMethod));
+                }
+                if (i == 0) {
+                    for (String alsoChannel : alsoFirstRowChannels) {
+                        contexts.add(new ChannelInvocationContext(alsoChannel, dataRow, testMethod));
+                    }
                 }
             }
             return contexts.stream();

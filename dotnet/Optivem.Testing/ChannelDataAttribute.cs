@@ -43,6 +43,13 @@ public class ChannelDataAttribute : DataAttribute
     private static readonly Type CLASS_DATA_ATTRIBUTE_TYPE = Type.GetType("Xunit.ClassDataAttribute, xunit.core")!;
     private static readonly Type MEMBER_DATA_ATTRIBUTE_TYPE = Type.GetType("Xunit.MemberDataAttribute, xunit.core")!;
 
+    /// <summary>
+    /// Additional channels that only the first data row should run on.
+    /// All other rows run only on the base channels.
+    /// Example: [ChannelData(ChannelType.API, AlsoFirstRow = ChannelType.UI)]
+    /// </summary>
+    public string[] AlsoFirstRow { get; set; } = Array.Empty<string>();
+
     public ChannelDataAttribute(params string[] channels)
     {
         _channels = channels ?? throw new ArgumentNullException(nameof(channels));
@@ -94,14 +101,24 @@ public class ChannelDataAttribute : DataAttribute
         // If ChannelInlineData is present
         else if (inlineDataAttributes.Length > 0)
         {
-            // Each inline data row may specify additional channels via 'Also'
-            foreach (var inlineDataAttr in inlineDataAttributes)
+            for (int i = 0; i < inlineDataAttributes.Length; i++)
             {
-                // Effective channels = base channels + Also channels
+                var inlineDataAttr = inlineDataAttributes[i];
+                // Effective channels = base channels + per-row Also + alsoFirstRow (first row only)
                 var effectiveChannels = channelsToUse.ToList();
                 if (inlineDataAttr.Also != null && inlineDataAttr.Also.Length > 0)
                 {
                     foreach (var also in inlineDataAttr.Also)
+                    {
+                        if (!effectiveChannels.Any(c => string.Equals(c, also, StringComparison.OrdinalIgnoreCase)))
+                        {
+                            effectiveChannels.Add(also);
+                        }
+                    }
+                }
+                if (i == 0 && AlsoFirstRow.Length > 0)
+                {
+                    foreach (var also in AlsoFirstRow)
                     {
                         if (!effectiveChannels.Any(c => string.Equals(c, also, StringComparison.OrdinalIgnoreCase)))
                         {
@@ -129,10 +146,11 @@ public class ChannelDataAttribute : DataAttribute
                     $"Type {classDataAttribute.ProviderType.Name} must implement IEnumerable<object[]>");
             }
 
-            // Create Cartesian product: channels × class data
-            foreach (var channel in channelsToUse)
+            var dataRows = dataProvider.ToList();
+            foreach (var (dataRow, rowIndex) in dataRows.Select((r, i) => (r, i)))
             {
-                foreach (var dataRow in dataProvider)
+                var effectiveChannels = GetEffectiveChannels(channelsToUse, rowIndex);
+                foreach (var channel in effectiveChannels)
                 {
                     var testCase = new List<object> { new Channel(channel) };
                     testCase.AddRange(dataRow);
@@ -176,10 +194,11 @@ public class ChannelDataAttribute : DataAttribute
                     $"Member '{memberDataAttribute.MemberName}' must return IEnumerable<object[]>");
             }
 
-            // Create Cartesian product: channels × member data
-            foreach (var channel in channelsToUse)
+            var memberDataRows = dataProvider.ToList();
+            foreach (var (dataRow, rowIndex) in memberDataRows.Select((r, i) => (r, i)))
             {
-                foreach (var dataRow in dataProvider)
+                var effectiveChannels = GetEffectiveChannels(channelsToUse, rowIndex);
+                foreach (var channel in effectiveChannels)
                 {
                     var testCase = new List<object> { new Channel(channel) };
                     testCase.AddRange(dataRow);
@@ -190,6 +209,22 @@ public class ChannelDataAttribute : DataAttribute
     }
 
 
+
+    private List<string> GetEffectiveChannels(string[] baseChannels, int rowIndex)
+    {
+        var channels = baseChannels.ToList();
+        if (rowIndex == 0 && AlsoFirstRow.Length > 0)
+        {
+            foreach (var also in AlsoFirstRow)
+            {
+                if (!channels.Any(c => string.Equals(c, also, StringComparison.OrdinalIgnoreCase)))
+                {
+                    channels.Add(also);
+                }
+            }
+        }
+        return channels;
+    }
 
     private static void ValidateTheoryAttributePresent(MethodInfo testMethod)
     {

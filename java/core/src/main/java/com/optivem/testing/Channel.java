@@ -18,5 +18,21 @@ public @interface Channel {
      * @return array of channel names
      */
     String[] value();
-}
 
+    /**
+     * Additional channels that only the first data row should run on.
+     * All other rows run only on the base channels from {@link #value()}.
+     * <p>
+     * Example:
+     * <pre>
+     * &#64;TestTemplate
+     * &#64;Channel(value = ChannelType.API, alsoFirstRow = ChannelType.UI)
+     * &#64;ValueSource(strings = {"3.5", "lala"})
+     * void test(String value) {
+     *     // "3.5" runs on API + UI, "lala" runs on API only
+     * }
+     * </pre>
+     * @return additional channel types for the first data row only
+     */
+    String[] alsoFirstRow() default {};
+}

@@ -8,23 +8,30 @@ import { getRegistrationChannel } from '../channel.js';
  * property (string or string[]), the row will also be registered for those channels
  * beyond the base channels from forChannels.
  *
+ * Supports `alsoFirstRowChannels`: additional channels that only the first data row
+ * should run on. All other rows run only on the base channels.
+ *
  * Usage:
  * ```typescript
- * const testEach = bindTestEach(test);
- *
+ * // Per-row also:
+ * const testEach = bindTestEach(test, ['API']);
  * testEach([
  *     { unitPrice: '20.00', quantity: '5', basePrice: '100.00', also: ['UI'] },   // API + UI
  *     { unitPrice: '10.00', quantity: '3', basePrice: '30.00' },                   // API only
- *     { unitPrice: '15.50', quantity: '4', basePrice: '62.00' },                   // API only
- * ])(
- *     'should place order with $unitPrice x $quantity = $basePrice',
- *     async ({ scenario, unitPrice, quantity, basePrice }) => { ... }
- * );
+ * ])('should place order ...', async ({ scenario, unitPrice }) => { ... });
+ *
+ * // alsoFirstRow (first row gets extra channels automatically):
+ * const testEach = bindTestEach(test, ['API'], ['UI']);
+ * testEach([
+ *     { unitPrice: '20.00', quantity: '5', basePrice: '100.00' },   // API + UI (first row)
+ *     { unitPrice: '10.00', quantity: '3', basePrice: '30.00' },    // API only
+ * ])('should place order ...', async ({ scenario, unitPrice }) => { ... });
  * ```
  */
 export function bindTestEach(
     testObj: any,
     baseChannels?: string[],
+    alsoFirstRowChannels?: string[],
 ) {
     return <TCase>(
         cases: ReadonlyArray<TCase>,
@@ -33,7 +40,7 @@ export function bindTestEach(
             const placeholderKeys = Array.from(name.matchAll(/\$(\w+)/g)).map((match) => match[1]);
             const uniquePlaceholderKeys = [...new Set(placeholderKeys)];
 
-            cases.forEach((rawRow) => {
+            cases.forEach((rawRow, rowIndex) => {
                 let row: Record<string, unknown>;
                 if (rawRow != null && typeof rawRow === 'object' && !Array.isArray(rawRow)) {
                     row = rawRow as Record<string, unknown>;
@@ -47,8 +54,7 @@ export function bindTestEach(
                     );
                 }
 
-                // Per-row 'also' channels: if the current registration channel is not
-                // a base channel and not in the row's 'also' list, skip this row.
+                // Channel filtering: skip rows that shouldn't run on the current channel.
                 const currentChannel = getRegistrationChannel();
                 if (currentChannel != null && baseChannels != null) {
                     const rowAlso = row['also'];
@@ -57,7 +63,9 @@ export function bindTestEach(
                         : [];
                     const isBaseChannel = baseChannels.includes(currentChannel);
                     const isAlsoChannel = alsoList.includes(currentChannel);
-                    if (!isBaseChannel && !isAlsoChannel) {
+                    const isAlsoFirstRow = rowIndex === 0
+                        && alsoFirstRowChannels?.includes(currentChannel) === true;
+                    if (!isBaseChannel && !isAlsoChannel && !isAlsoFirstRow) {
                         return; // Skip this row for this channel
                     }
                 }
