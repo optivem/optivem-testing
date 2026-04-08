@@ -1,0 +1,19 @@
+name: Acceptance Stage
+
+on:
+  schedule:
+    - cron: '0 * * * *' # Runs every hour
+  workflow_dispatch:
+
+jobs:
+  acceptance-dotnet:
+    uses: ./.github/workflows/dotnet-acceptance-stage.yml
+    secrets: inherit
+
+  acceptance-java:
+    uses: ./.github/workflows/java-acceptance-stage.yml
+    secrets: inherit
+
+  acceptance-typescript:
+    uses: ./.github/workflows/typescript-acceptance-stage.yml
+    secrets: inherit
