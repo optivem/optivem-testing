@@ -1,0 +1,166 @@
+name: One Click Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'New version to release (e.g., 1.2.0)'
+        required: true
+        type: string
+
+jobs:
+  bump-version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      commit-sha: ${{ steps.push.outputs.commit-sha }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Bump version
+        run: |
+          echo "${{ inputs.version }}" > VERSION
+          bash scripts/bump-version.sh
+
+      - name: Commit and push
+        id: push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION dotnet/Directory.Build.props java/build.gradle typescript/package.json
+          git commit -m "Bump version to ${{ inputs.version }}"
+          git push
+          echo "commit-sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
+
+  wait-for-dotnet-commit-stage:
+    needs: bump-version
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      COMMIT_SHA: ${{ needs.bump-version.outputs.commit-sha }}
+    steps:
+      - name: Wait for commit stages to start
+        run: sleep 30
+
+      - name: Wait for .NET Commit Stage
+        run: |
+          echo "Waiting for .NET Commit Stage (commit: $COMMIT_SHA)..."
+          while true; do
+            RUN_ID=$(gh run list -w "dotnet-commit-stage.yml" -L 5 --json databaseId,headSha \
+              -q "[.[] | select(.headSha == \"$COMMIT_SHA\")] | .[0].databaseId")
+            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
+              echo "Found run $RUN_ID, watching..."
+              gh run watch "$RUN_ID" --exit-status
+              break
+            fi
+            echo "Run not found yet, waiting..."
+            sleep 30
+          done
+
+  wait-for-java-commit-stage:
+    needs: bump-version
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      COMMIT_SHA: ${{ needs.bump-version.outputs.commit-sha }}
+    steps:
+      - name: Wait for commit stages to start
+        run: sleep 30
+
+      - name: Wait for Java Commit Stage
+        run: |
+          echo "Waiting for Java Commit Stage (commit: $COMMIT_SHA)..."
+          while true; do
+            RUN_ID=$(gh run list -w "java-commit-stage.yml" -L 5 --json databaseId,headSha \
+              -q "[.[] | select(.headSha == \"$COMMIT_SHA\")] | .[0].databaseId")
+            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
+              echo "Found run $RUN_ID, watching..."
+              gh run watch "$RUN_ID" --exit-status
+              break
+            fi
+            echo "Run not found yet, waiting..."
+            sleep 30
+          done
+
+  wait-for-typescript-commit-stage:
+    needs: bump-version
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+      COMMIT_SHA: ${{ needs.bump-version.outputs.commit-sha }}
+    steps:
+      - name: Wait for commit stages to start
+        run: sleep 30
+
+      - name: Wait for TypeScript Commit Stage
+        run: |
+          echo "Waiting for TypeScript Commit Stage (commit: $COMMIT_SHA)..."
+          while true; do
+            RUN_ID=$(gh run list -w "typescript-commit-stage.yml" -L 5 --json databaseId,headSha \
+              -q "[.[] | select(.headSha == \"$COMMIT_SHA\")] | .[0].databaseId")
+            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
+              echo "Found run $RUN_ID, watching..."
+              gh run watch "$RUN_ID" --exit-status
+              break
+            fi
+            echo "Run not found yet, waiting..."
+            sleep 30
+          done
+
+  run-acceptance-stage:
+    needs: [wait-for-dotnet-commit-stage, wait-for-java-commit-stage, wait-for-typescript-commit-stage]
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Trigger Acceptance Stage
+        run: gh workflow run acceptance-stage.yml
+
+      - name: Wait for Acceptance Stage to start
+        run: sleep 30
+
+      - name: Wait for Acceptance Stage to complete
+        run: |
+          echo "Waiting for Acceptance Stage..."
+          while true; do
+            RUN_ID=$(gh run list -w "acceptance-stage.yml" -L 1 --json databaseId,status \
+              -q '.[0].databaseId')
+            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
+              echo "Found run $RUN_ID, watching..."
+              gh run watch "$RUN_ID" --exit-status
+              break
+            fi
+            echo "Run not found yet, waiting..."
+            sleep 30
+          done
+
+  trigger-release-stage:
+    needs: run-acceptance-stage
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - name: Trigger Release Stage
+        run: |
+          gh workflow run release-stage.yml
+          echo "Release Stage triggered. It will run independently."
+
+      - name: Display summary
+        run: |
+          echo "## Release ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Version bump | Done |" >> $GITHUB_STEP_SUMMARY
+          echo "| Commit stages | Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Acceptance stage | Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Release stage | Triggered |" >> $GITHUB_STEP_SUMMARY
