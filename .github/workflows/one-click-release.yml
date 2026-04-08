@@ -110,7 +110,7 @@ jobs:
           workflow: acceptance-stage.yml
           poll-interval: '300'
 
-  trigger-release-stage:
+  run-release-stage:
     needs: [run-acceptance-stage, bump-version]
     runs-on: ubuntu-latest
     env:
