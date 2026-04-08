@@ -364,6 +364,88 @@ public class ChannelExtensionTest {
     }
 
     // ==========================================================================
+    // @Channel alsoForFirstRow Tests
+    // ==========================================================================
+
+    /**
+     * alsoForFirstRow with @DataSource: CHANNEL_A is base, CHANNEL_B only for first row.
+     * Expected: 5 invocations (CHANNEL_A×3 rows + CHANNEL_B×1 first row).
+     */
+    @TestTemplate
+    @Channel(value = TestChannel.CHANNEL_A, alsoForFirstRow = TestChannel.CHANNEL_B)
+    @DataSource("first")
+    @DataSource("second")
+    @DataSource("third")
+    void shouldSupportAlsoForFirstRowWithDataSource(String value) {
+        assertNotNull(value, "Value should not be null");
+        assertTrue(value.equals("first") || value.equals("second") || value.equals("third"),
+                "Value should be first, second, or third");
+    }
+
+    /**
+     * alsoForFirstRow with @ValueSource: CHANNEL_A is base, CHANNEL_B only for first row.
+     * Expected: 4 invocations (CHANNEL_A×3 values + CHANNEL_B×1 first value).
+     */
+    @TestTemplate
+    @Channel(value = TestChannel.CHANNEL_A, alsoForFirstRow = TestChannel.CHANNEL_B)
+    @ValueSource(strings = {"hello", "world", "test"})
+    void shouldSupportAlsoForFirstRowWithValueSource(String value) {
+        assertNotNull(value, "Value should not be null");
+        assertTrue(value.equals("hello") || value.equals("world") || value.equals("test"),
+                "Value should be hello, world, or test");
+    }
+
+    /**
+     * alsoForFirstRow with @ArgumentsSource: CHANNEL_A is base, CHANNEL_B only for first row.
+     * Expected: 4 invocations (CHANNEL_A×3 rows + CHANNEL_B×1 first row).
+     */
+    @TestTemplate
+    @Channel(value = TestChannel.CHANNEL_A, alsoForFirstRow = TestChannel.CHANNEL_B)
+    @ArgumentsSource(TestArgumentsProvider.class)
+    void shouldSupportAlsoForFirstRowWithArgumentsSource(String name, int value) {
+        assertNotNull(name, "Name should not be null");
+        assertTrue(value >= 100, "Value should be >= 100");
+    }
+
+    /**
+     * alsoForFirstRow with @MethodSource: CHANNEL_A is base, CHANNEL_B only for first row.
+     * Expected: 4 invocations (CHANNEL_A×3 rows + CHANNEL_B×1 first row).
+     */
+    @TestTemplate
+    @Channel(value = TestChannel.CHANNEL_A, alsoForFirstRow = TestChannel.CHANNEL_B)
+    @MethodSource("provideStringsForMethodSource")
+    void shouldSupportAlsoForFirstRowWithMethodSource(String fruit) {
+        assertNotNull(fruit, "Fruit should not be null");
+        assertTrue(fruit.length() > 0, "Fruit should not be empty");
+    }
+
+    /**
+     * alsoForFirstRow with @CsvSource: CHANNEL_A is base, CHANNEL_B only for first row.
+     * Expected: 4 invocations (CHANNEL_A×3 rows + CHANNEL_B×1 first row).
+     */
+    @TestTemplate
+    @Channel(value = TestChannel.CHANNEL_A, alsoForFirstRow = TestChannel.CHANNEL_B)
+    @CsvSource({
+            "apple, 1",
+            "banana, 2",
+            "cherry, 3"
+    })
+    void shouldSupportAlsoForFirstRowWithCsvSource(String fruit, String quantity) {
+        assertNotNull(fruit, "Fruit should not be null");
+        assertNotNull(quantity, "Quantity should not be null");
+    }
+
+    /**
+     * alsoForFirstRow should not affect tests without data sources.
+     * Expected: 1 invocation (CHANNEL_A only, alsoForFirstRow has no effect without data).
+     */
+    @TestTemplate
+    @Channel(value = TestChannel.CHANNEL_A, alsoForFirstRow = TestChannel.CHANNEL_B)
+    void shouldNotAffectTestsWithoutDataSource() {
+        assertTrue(true, "Test should run for base channel only");
+    }
+
+    // ==========================================================================
     // No Data Source Tests (just channels)
     // ==========================================================================
 
