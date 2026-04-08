@@ -4,6 +4,12 @@
 [![.NET Commit Stage](https://github.com/optivem/optivem-testing/actions/workflows/dotnet-commit-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/dotnet-commit-stage.yml)
 [![TypeScript Commit Stage](https://github.com/optivem/optivem-testing/actions/workflows/typescript-commit-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/typescript-commit-stage.yml)
 
+[![Java Acceptance Stage](https://github.com/optivem/optivem-testing/actions/workflows/java-acceptance-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/java-acceptance-stage.yml)
+[![.NET Acceptance Stage](https://github.com/optivem/optivem-testing/actions/workflows/dotnet-acceptance-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/dotnet-acceptance-stage.yml)
+[![TypeScript Acceptance Stage](https://github.com/optivem/optivem-testing/actions/workflows/typescript-acceptance-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/typescript-acceptance-stage.yml)
+
+[![Release Stage](https://github.com/optivem/optivem-testing/actions/workflows/release-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/release-stage.yml)
+
 [![Maven Central](https://img.shields.io/maven-central/v/com.optivem/optivem-testing)](https://central.sonatype.com/artifact/com.optivem/optivem-testing)
 [![NuGet](https://img.shields.io/nuget/v/Optivem.Testing)](https://www.nuget.org/packages/Optivem.Testing)
 [![npm](https://img.shields.io/npm/v/@optivem/optivem-testing)](https://www.npmjs.com/package/@optivem/optivem-testing)
