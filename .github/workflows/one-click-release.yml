@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'New version to release (e.g., 1.2.0)'
-        required: true
+        description: 'Version to release (e.g., 1.2.0). Leave blank to auto-increment patch.'
+        required: false
         type: string
 
 jobs:
@@ -15,15 +15,31 @@ jobs:
       contents: write
     outputs:
       commit-sha: ${{ steps.push.outputs.commit-sha }}
+      version: ${{ steps.resolve.outputs.version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
 
+      - name: Resolve version
+        id: resolve
+        run: |
+          if [ -n "${{ inputs.version }}" ]; then
+            VERSION="${{ inputs.version }}"
+          else
+            CURRENT=$(tr -d '[:space:]' < VERSION)
+            MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+            MINOR=$(echo "$CURRENT" | cut -d. -f2)
+            PATCH=$(echo "$CURRENT" | cut -d. -f3)
+            VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
+            echo "Auto-incremented patch: $CURRENT -> $VERSION"
+          fi
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+
       - name: Bump version
         run: |
-          echo "${{ inputs.version }}" > VERSION
+          echo "${{ steps.resolve.outputs.version }}" > VERSION
           bash scripts/bump-version.sh
 
       - name: Commit and push
@@ -32,7 +48,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add VERSION dotnet/Directory.Build.props java/build.gradle typescript/package.json
-          git commit -m "Bump version to ${{ inputs.version }}"
+          git commit -m "Bump version to ${{ steps.resolve.outputs.version }}"
           git push
           echo "commit-sha=$(git rev-parse HEAD)" >> $GITHUB_OUTPUT
 
@@ -143,24 +159,40 @@ jobs:
           done
 
   trigger-release-stage:
-    needs: run-acceptance-stage
+    needs: [run-acceptance-stage, bump-version]
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       GH_REPO: ${{ github.repository }}
     steps:
       - name: Trigger Release Stage
+        run: gh workflow run release-stage.yml
+
+      - name: Wait for Release Stage to start
+        run: sleep 30
+
+      - name: Wait for Release Stage to complete
         run: |
-          gh workflow run release-stage.yml
-          echo "Release Stage triggered. It will run independently."
+          echo "Waiting for Release Stage..."
+          while true; do
+            RUN_ID=$(gh run list -w "release-stage.yml" -L 1 --json databaseId,status \
+              -q '.[0].databaseId')
+            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
+              echo "Found run $RUN_ID, watching..."
+              gh run watch "$RUN_ID" --exit-status
+              break
+            fi
+            echo "Run not found yet, waiting..."
+            sleep 30
+          done
 
       - name: Display summary
         run: |
-          echo "## Release ${{ inputs.version }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Release ${{ needs.bump-version.outputs.version }}" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Step | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Version bump | Done |" >> $GITHUB_STEP_SUMMARY
           echo "| Commit stages | Passed |" >> $GITHUB_STEP_SUMMARY
           echo "| Acceptance stage | Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Release stage | Triggered |" >> $GITHUB_STEP_SUMMARY
+          echo "| Release stage | Passed |" >> $GITHUB_STEP_SUMMARY
