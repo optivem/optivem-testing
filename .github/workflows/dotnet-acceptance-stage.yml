@@ -3,9 +3,6 @@ name: .NET Acceptance Stage
 on:
   workflow_dispatch: # Allow manual triggering
   workflow_call:
-    secrets:
-      GITHUB_TOKEN:
-        required: false
 
 concurrency:
   group: dotnet-acceptance-stage-${{ github.ref }}

@@ -3,9 +3,6 @@ name: TypeScript Acceptance Stage
 on:
   workflow_dispatch:
   workflow_call:
-    secrets:
-      GITHUB_TOKEN:
-        required: false
 
 concurrency:
   group: typescript-acceptance-stage-${{ github.ref }}
