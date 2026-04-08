@@ -135,56 +135,22 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
     steps:
-      - name: Trigger Acceptance Stage
-        run: gh workflow run acceptance-stage.yml
-
-      - name: Wait for Acceptance Stage to start
-        run: sleep 30
-
-      - name: Wait for Acceptance Stage to complete
-        run: |
-          echo "Waiting for Acceptance Stage..."
-          while true; do
-            RUN_ID=$(gh run list -w "acceptance-stage.yml" -L 1 --json databaseId,status \
-              -q '.[0].databaseId')
-            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
-              echo "Found run $RUN_ID, watching..."
-              gh run watch "$RUN_ID" --exit-status
-              break
-            fi
-            echo "Run not found yet, waiting..."
-            sleep 30
-          done
+      - name: Trigger and wait for Acceptance Stage
+        uses: optivem/actions/trigger-and-wait@main
+        with:
+          workflow: acceptance-stage.yml
 
   trigger-release-stage:
     needs: [run-acceptance-stage, bump-version]
     runs-on: ubuntu-latest
     env:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      GH_REPO: ${{ github.repository }}
     steps:
-      - name: Trigger Release Stage
-        run: gh workflow run release-stage.yml
-
-      - name: Wait for Release Stage to start
-        run: sleep 30
-
-      - name: Wait for Release Stage to complete
-        run: |
-          echo "Waiting for Release Stage..."
-          while true; do
-            RUN_ID=$(gh run list -w "release-stage.yml" -L 1 --json databaseId,status \
-              -q '.[0].databaseId')
-            if [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ]; then
-              echo "Found run $RUN_ID, watching..."
-              gh run watch "$RUN_ID" --exit-status
-              break
-            fi
-            echo "Run not found yet, waiting..."
-            sleep 30
-          done
+      - name: Trigger and wait for Release Stage
+        uses: optivem/actions/trigger-and-wait@main
+        with:
+          workflow: release-stage.yml
 
       - name: Display summary
         run: |
