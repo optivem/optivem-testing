@@ -110,6 +110,8 @@ public class ChannelDataAttribute : DataAttribute
                 {
                     foreach (var also in inlineDataAttr.Also)
                     {
+                        if (!string.IsNullOrEmpty(channelEnv) && !string.Equals(also, channelEnv, StringComparison.OrdinalIgnoreCase))
+                            continue;
                         if (!effectiveChannels.Any(c => string.Equals(c, also, StringComparison.OrdinalIgnoreCase)))
                         {
                             effectiveChannels.Add(also);
@@ -120,6 +122,8 @@ public class ChannelDataAttribute : DataAttribute
                 {
                     foreach (var also in AlsoForFirstRow)
                     {
+                        if (!string.IsNullOrEmpty(channelEnv) && !string.Equals(also, channelEnv, StringComparison.OrdinalIgnoreCase))
+                            continue;
                         if (!effectiveChannels.Any(c => string.Equals(c, also, StringComparison.OrdinalIgnoreCase)))
                         {
                             effectiveChannels.Add(also);
@@ -212,11 +216,14 @@ public class ChannelDataAttribute : DataAttribute
 
     private List<string> GetEffectiveChannels(string[] baseChannels, int rowIndex)
     {
+        var channelEnv = Environment.GetEnvironmentVariable("CHANNEL");
         var channels = baseChannels.ToList();
         if (rowIndex == 0 && AlsoForFirstRow.Length > 0)
         {
             foreach (var also in AlsoForFirstRow)
             {
+                if (!string.IsNullOrEmpty(channelEnv) && !string.Equals(also, channelEnv, StringComparison.OrdinalIgnoreCase))
+                    continue;
                 if (!channels.Any(c => string.Equals(c, also, StringComparison.OrdinalIgnoreCase)))
                 {
                     channels.Add(also);
