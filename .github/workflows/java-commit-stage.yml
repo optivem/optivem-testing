@@ -35,9 +35,6 @@ jobs:
       with:
         gradle-version: wrapper
 
-    - name: Make gradlew executable
-      run: chmod +x gradlew
-
     - name: Extract base version
       id: extract_version
       uses: ./.github/actions/extract-gradle-version
