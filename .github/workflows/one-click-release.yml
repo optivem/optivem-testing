@@ -4,8 +4,8 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version to release (e.g., 1.2.0). Leave blank to auto-increment patch.'
-        required: false
+        description: 'Version to release (e.g., 1.2.0). Developer-driven — no auto-increment.'
+        required: true
         type: string
 
 jobs:
@@ -26,15 +26,10 @@ jobs:
       - name: Resolve version
         id: resolve
         run: |
-          if [ -n "${{ inputs.version }}" ]; then
-            VERSION="${{ inputs.version }}"
-          else
-            CURRENT=$(tr -d '[:space:]' < VERSION)
-            MAJOR=$(echo "$CURRENT" | cut -d. -f1)
-            MINOR=$(echo "$CURRENT" | cut -d. -f2)
-            PATCH=$(echo "$CURRENT" | cut -d. -f3)
-            VERSION="$MAJOR.$MINOR.$((PATCH + 1))"
-            echo "Auto-incremented patch: $CURRENT -> $VERSION"
+          VERSION="${{ inputs.version }}"
+          if [ -z "$VERSION" ]; then
+            echo "::error::version input is required. Provide the target version (e.g., 1.2.0)."
+            exit 1
           fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
 
