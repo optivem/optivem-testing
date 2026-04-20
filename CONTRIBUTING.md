@@ -62,11 +62,6 @@ To trigger and watch:
 gh workflow run acceptance-stage.yml
 sleep 5
 gh run watch $(gh run list -w "acceptance-stage.yml" -L 1 --json databaseId -q '.[0].databaseId')
-
-# Individual languages
-gh workflow run java-acceptance-stage.yml
-gh workflow run dotnet-acceptance-stage.yml
-gh workflow run typescript-acceptance-stage.yml
 ```
 
 ### Release Stage (manual)

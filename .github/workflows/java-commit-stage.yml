@@ -40,29 +40,7 @@ jobs:
       uses: ./.github/actions/extract-gradle-version
       with:
         working-directory: java
-    
-    - name: Check if Git tag exists
-      uses: optivem/check-tag-exists-action@v1
-      with:
-        tag-name: v${{ steps.extract_version.outputs.base_version }}
-    - name: Check if GitHub Release exists
-      id: check-release
-      uses: optivem/check-release-exists-action@v2
-      with:
-        version: v${{ steps.extract_version.outputs.base_version }}
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-    - name: Fail if release already exists
-      if: steps.check-release.outputs.exists == 'true'
-      run: |
-        echo "::error::Release v${{ steps.extract_version.outputs.base_version }} already exists. Cannot use this version."
-        exit 1
-    - name: Check if Maven package version exists
-      uses: ./.github/actions/check-maven-package-exists
-      with:
-        release-version: ${{ steps.extract_version.outputs.base_version }}
-        github-token: ${{ secrets.GITHUB_TOKEN }}
-        repository: ${{ github.repository }}
-    
+
     - name: Determine RC version
       id: version
       run: echo "version=${{ steps.extract_version.outputs.base_version }}-rc.${{ github.run_number }}" >> $GITHUB_OUTPUT

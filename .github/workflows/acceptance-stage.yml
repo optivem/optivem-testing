@@ -5,15 +5,164 @@ on:
     - cron: '0 * * * *' # Runs every hour
   workflow_dispatch:
 
-jobs:
-  acceptance-dotnet:
-    uses: ./.github/workflows/dotnet-acceptance-stage.yml
-    secrets: inherit
+concurrency:
+  group: acceptance-stage-${{ github.ref }}
+  cancel-in-progress: true
 
+jobs:
   acceptance-java:
-    uses: ./.github/workflows/java-acceptance-stage.yml
-    secrets: inherit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: java
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Set up JDK 21
+      uses: actions/setup-java@v5
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v4
+      with:
+        gradle-version: wrapper
+
+    - name: Make gradlew executable
+      run: chmod +x gradlew
+
+    - name: Verify package dependencies can be resolved
+      run: ./gradlew system-test:smoke-test-rc:verifyDependencies --no-daemon --refresh-dependencies
+      env:
+        GITHUB_USERNAME: ${{ github.actor }}
+        GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Run acceptance tests (GitHub Packages)
+      run: ./gradlew system-test:smoke-test-rc:test --no-daemon --refresh-dependencies
+      env:
+        GITHUB_USERNAME: ${{ github.actor }}
+        GITHUB_READ_PACKAGES_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create acceptance summary
+      run: |
+        echo "## ✅ Java Acceptance Completed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**RC Version Tested:** Latest RC from commit stage" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🧪 **Tests Run:**" >> $GITHUB_STEP_SUMMARY
+        echo "- Dependency resolution verification" >> $GITHUB_STEP_SUMMARY
+        echo "- Smoke tests against GitHub Packages" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ✅ All acceptance tests passed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Next Step:** RC is ready for promotion to release" >> $GITHUB_STEP_SUMMARY
+
+  acceptance-dotnet:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dotnet
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v6
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v5
+      with:
+        dotnet-version: 8.0.x
+
+    - name: Configure GitHub Packages source
+      run: |
+        dotnet nuget add source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+          --name github \
+          --username ${{ github.actor }} \
+          --password ${{ secrets.GITHUB_TOKEN }} \
+          --store-password-in-clear-text
+
+    - name: Test dependency resolution (GitHub Packages)
+      working-directory: dotnet/SystemTest/Optivem.Testing.SystemTest.SmokeTestRc
+      run: |
+        dotnet restore --force --no-cache
+        echo "✅ Successfully resolved RC package from GitHub Packages"
+
+    - name: Run acceptance tests (GitHub Packages)
+      working-directory: dotnet/SystemTest/Optivem.Testing.SystemTest.SmokeTestRc
+      run: dotnet test --no-restore --verbosity normal --configuration Release
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Create acceptance summary
+      run: |
+        echo "## ✅ .NET Acceptance Completed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**RC Package Tested:** Latest RC from GitHub Packages" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "🧪 **Tests Run:**" >> $GITHUB_STEP_SUMMARY
+        echo "- RC package resolution from GitHub Packages" >> $GITHUB_STEP_SUMMARY
+        echo "- System smoke tests against published RC package" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ✅ All acceptance tests passed" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**Next Step:** RC is ready for promotion to release" >> $GITHUB_STEP_SUMMARY
 
   acceptance-typescript:
-    uses: ./.github/workflows/typescript-acceptance-stage.yml
-    secrets: inherit
+    name: Smoke Test RC
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: typescript
+    permissions:
+      contents: read
+      packages: read
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 22
+
+      - name: Configure GitHub Packages
+        run: |
+          echo "@optivem:registry=https://npm.pkg.github.com" > system-test/smoke-test-rc/.npmrc
+          echo "//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}" >> system-test/smoke-test-rc/.npmrc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Test dependency resolution (GitHub Packages)
+        working-directory: typescript/system-test/smoke-test-rc
+        run: |
+          npm install --prefer-online
+          echo "✅ Successfully resolved RC package from GitHub Packages"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Run acceptance tests (GitHub Packages)
+        working-directory: typescript/system-test/smoke-test-rc
+        run: npm test
+
+      - name: Create acceptance summary
+        run: |
+          echo "## ✅ TypeScript Acceptance Completed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**RC Package Tested:** Latest RC from GitHub Packages" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "🧪 **Tests Run:**" >> $GITHUB_STEP_SUMMARY
+          echo "- RC package resolution from GitHub Packages" >> $GITHUB_STEP_SUMMARY
+          echo "- Smoke tests against published RC package" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Status:** ✅ All acceptance tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Step:** RC is ready for promotion to release" >> $GITHUB_STEP_SUMMARY

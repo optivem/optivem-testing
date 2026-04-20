@@ -4,9 +4,7 @@
 [![.NET Commit Stage](https://github.com/optivem/optivem-testing/actions/workflows/dotnet-commit-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/dotnet-commit-stage.yml)
 [![TypeScript Commit Stage](https://github.com/optivem/optivem-testing/actions/workflows/typescript-commit-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/typescript-commit-stage.yml)
 
-[![Java Acceptance Stage](https://github.com/optivem/optivem-testing/actions/workflows/java-acceptance-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/java-acceptance-stage.yml)
-[![.NET Acceptance Stage](https://github.com/optivem/optivem-testing/actions/workflows/dotnet-acceptance-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/dotnet-acceptance-stage.yml)
-[![TypeScript Acceptance Stage](https://github.com/optivem/optivem-testing/actions/workflows/typescript-acceptance-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/typescript-acceptance-stage.yml)
+[![Acceptance Stage](https://github.com/optivem/optivem-testing/actions/workflows/acceptance-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/acceptance-stage.yml)
 
 [![Release Stage](https://github.com/optivem/optivem-testing/actions/workflows/release-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/release-stage.yml)
 
