@@ -8,6 +8,8 @@
 [![.NET Acceptance Stage](https://github.com/optivem/optivem-testing/actions/workflows/dotnet-acceptance-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/dotnet-acceptance-stage.yml)
 [![TypeScript Acceptance Stage](https://github.com/optivem/optivem-testing/actions/workflows/typescript-acceptance-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/typescript-acceptance-stage.yml)
 
+[![Acceptance Stage](https://github.com/optivem/optivem-testing/actions/workflows/acceptance-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/acceptance-stage.yml)
+
 [![Release Stage](https://github.com/optivem/optivem-testing/actions/workflows/release-stage.yml/badge.svg)](https://github.com/optivem/optivem-testing/actions/workflows/release-stage.yml)
 
 [![Maven Central](https://img.shields.io/maven-central/v/com.optivem/optivem-testing)](https://central.sonatype.com/artifact/com.optivem/optivem-testing)
