@@ -102,6 +102,7 @@ jobs:
       - name: Trigger and wait for Acceptance Stage
         uses: optivem/actions/trigger-and-wait-for-github-workflow@v1
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           workflow: acceptance-stage.yml
           poll-interval: '300'
 
@@ -114,6 +115,7 @@ jobs:
       - name: Trigger and wait for Release Stage
         uses: optivem/actions/trigger-and-wait-for-github-workflow@v1
         with:
+          token: ${{ secrets.GITHUB_TOKEN }}
           workflow: release-stage.yml
           poll-interval: '300'
 
