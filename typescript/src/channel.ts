@@ -24,7 +24,7 @@ export function registerChannel<TFixtures>(
     const channelEnv = process.env.CHANNEL;
     const channelsToRun =
         channelEnv != null && channelEnv !== ''
-            ? channelTypes.filter((c) => c === channelEnv)
+            ? channelTypes.filter((c) => c.toUpperCase() === channelEnv.toUpperCase())
             : channelTypes;
 
     for (const channel of channelsToRun) {
@@ -71,7 +71,7 @@ export function forChannels(
         const channelEnv = process.env.CHANNEL;
         const channelsToRun =
             channelEnv != null && channelEnv !== ''
-                ? channelTypes.filter((c) => c === channelEnv)
+                ? channelTypes.filter((c) => c.toUpperCase() === channelEnv.toUpperCase())
                 : channelTypes;
 
         for (const channel of channelsToRun) {
