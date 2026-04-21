@@ -58,7 +58,7 @@ jobs:
         run: sleep 30
 
       - name: Wait for Java Commit Stage
-        uses: optivem/actions/wait-for-github-commit-run@v1
+        uses: optivem/actions/wait-for-github-workflow@v1
         with:
           workflow: java-commit-stage.yml
           commit-sha: ${{ needs.bump-version.outputs.commit-sha }}
@@ -73,7 +73,7 @@ jobs:
         run: sleep 30
 
       - name: Wait for .NET Commit Stage
-        uses: optivem/actions/wait-for-github-commit-run@v1
+        uses: optivem/actions/wait-for-github-workflow@v1
         with:
           workflow: dotnet-commit-stage.yml
           commit-sha: ${{ needs.bump-version.outputs.commit-sha }}
@@ -88,7 +88,7 @@ jobs:
         run: sleep 30
 
       - name: Wait for TypeScript Commit Stage
-        uses: optivem/actions/wait-for-github-commit-run@v1
+        uses: optivem/actions/wait-for-github-workflow@v1
         with:
           workflow: typescript-commit-stage.yml
           commit-sha: ${{ needs.bump-version.outputs.commit-sha }}
