@@ -120,6 +120,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           workflow: acceptance-stage.yml
           poll-interval: '300'
+          timeout-seconds: '7200'
 
   run-release-stage:
     needs: [run-acceptance-stage, bump-version]
@@ -133,6 +134,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           workflow: release-stage.yml
           poll-interval: '300'
+          timeout-seconds: '3600'
 
       - name: Display summary
         run: |
