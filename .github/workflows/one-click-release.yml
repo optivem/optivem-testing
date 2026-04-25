@@ -73,7 +73,7 @@ jobs:
         run: sleep 30
 
       - name: Wait for Java Commit Stage
-        uses: optivem/actions/wait-for-github-workflow@v1
+        uses: optivem/actions/wait-for-workflow@v1
         with:
           workflow: java-commit-stage.yml
           commit-sha: ${{ needs.bump-version.outputs.commit-sha }}
@@ -88,7 +88,7 @@ jobs:
         run: sleep 30
 
       - name: Wait for .NET Commit Stage
-        uses: optivem/actions/wait-for-github-workflow@v1
+        uses: optivem/actions/wait-for-workflow@v1
         with:
           workflow: dotnet-commit-stage.yml
           commit-sha: ${{ needs.bump-version.outputs.commit-sha }}
@@ -103,7 +103,7 @@ jobs:
         run: sleep 30
 
       - name: Wait for TypeScript Commit Stage
-        uses: optivem/actions/wait-for-github-workflow@v1
+        uses: optivem/actions/wait-for-workflow@v1
         with:
           workflow: typescript-commit-stage.yml
           commit-sha: ${{ needs.bump-version.outputs.commit-sha }}
@@ -115,7 +115,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Trigger and wait for Acceptance Stage
-        uses: optivem/actions/trigger-and-wait-for-github-workflow@v1
+        uses: optivem/actions/trigger-and-wait-for-workflow@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           workflow: acceptance-stage.yml
@@ -129,7 +129,7 @@ jobs:
       GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - name: Trigger and wait for Release Stage
-        uses: optivem/actions/trigger-and-wait-for-github-workflow@v1
+        uses: optivem/actions/trigger-and-wait-for-workflow@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           workflow: release-stage.yml
