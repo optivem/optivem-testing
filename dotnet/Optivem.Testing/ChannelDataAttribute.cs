@@ -66,7 +66,7 @@ public class ChannelDataAttribute : DataAttribute
         // Check for incorrect usage of standard xUnit attributes
         ValidateNoStandardXUnitAttributes(testMethod);
 
-        // Filter channels by CHANNEL env var when set (enables Run-SystemTests.ps1 API vs UI separation)
+        // Filter channels by CHANNEL env var when set (enables per-suite API vs UI separation in the test runner)
         var channelsToUse = _channels;
         var channelEnv = Environment.GetEnvironmentVariable("CHANNEL");
         if (!string.IsNullOrEmpty(channelEnv))
