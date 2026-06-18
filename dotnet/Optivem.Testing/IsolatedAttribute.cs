@@ -8,7 +8,7 @@ namespace Optivem.Testing;
 /// <para>Use this attribute for tests that:</para>
 /// <list type="bullet">
 ///   <item><description>Modify shared state (e.g., deleting all orders)</description></item>
-///   <item><description>Depend on specific time values (TimeAttribute tests)</description></item>
+///   <item><description>Depend on specific time values</description></item>
 ///   <item><description>Have side effects that could affect other tests</description></item>
 ///   <item><description>Need exclusive access to resources</description></item>
 /// </list>

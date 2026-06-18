@@ -13,7 +13,7 @@ import java.lang.annotation.Target;
  * <p>Use this annotation for tests that:
  * <ul>
  *   <li>Modify shared state (e.g., deleting all orders)</li>
- *   <li>Depend on specific time values (@TimeDependent tests)</li>
+ *   <li>Depend on specific time values</li>
  *   <li>Have side effects that could affect other tests</li>
  *   <li>Need exclusive access to resources</li>
  * </ul>

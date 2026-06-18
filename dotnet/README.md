@@ -3,7 +3,7 @@
 [![NuGet](https://img.shields.io/nuget/v/Optivem.Testing.svg)](https://www.nuget.org/packages/Optivem.Testing/)
 [![License](https://img.shields.io/github/license/optivem/optivem-testing.svg)](LICENSE)
 
-**Optivem.Testing** is an xUnit extension for channel-based data-driven testing. It enables you to run the same tests across multiple channels (UI, API, etc.) with automatic Cartesian product generation, test isolation markers, and time-dependent test support.
+**Optivem.Testing** is an xUnit extension for channel-based data-driven testing. It enables you to run the same tests across multiple channels (UI, API, etc.) with automatic Cartesian product generation and test isolation markers.
 
 ## Features
 
@@ -11,7 +11,6 @@
 - **Cartesian Product Generation** - Automatically combine channels with test data
 - **Flexible Data Sources** - Supports inline data, class data, and member data
 - **Test Isolation** - Mark tests that require isolation (`[Isolated]`)
-- **Time-Dependent Tests** - Mark time-sensitive tests (`[Time]`)
 - **.NET 8+** - Modern .NET support
 
 ## Installation
@@ -166,35 +165,11 @@ dotnet test --filter "Category=isolated"
 dotnet test --filter "Category!=isolated"
 ```
 
-## Time-Dependent Tests
-
-Mark tests that depend on specific times:
-
-```csharp
-[Fact]
-[Time("2024-01-15T17:30:00Z")]
-public void DiscountRate_ShouldBe15Percent_WhenAfter5pm()
-{
-    // Test implementation
-}
-```
-
-**Filter time-dependent tests:**
-
-```bash
-# Run ONLY time-dependent tests
-dotnet test --filter "Category=time"
-
-# Run all EXCEPT time-dependent tests
-dotnet test --filter "Category!=time"
-```
-
 ## Best Practices
 
 1. **Channel Naming** - Use consistent channel names across your test suite (e.g., "UI", "API", "CLI")
 2. **Isolation** - Always mark tests with side effects using `[Isolated]`
 3. **Test Data** - Use `ChannelClassData` or `ChannelMemberData` for complex test data
-4. **Time Tests** - `[Time]` tests are automatically marked as `[Isolated]`
 
 ## Why Optivem.Testing?
 
